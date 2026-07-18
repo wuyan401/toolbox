@@ -1,4 +1,6 @@
+.claude/
 .agents/
+.git-rewrite/
 .DS_Store
 *.tmp
 *.log
