@@ -1,0 +1,77 @@
+/* ============================================
+   亮色主题 — v4 温暖微渐变 + 玻璃态
+   温暖微渐变背景：左上淡蓝 #e8f0fe · 右下淡紫 #f3e8ff · 中心 #fafbfc
+   毛玻璃导航 · 12 色彩色卡片
+   ============================================ */
+
+:root {
+    /* 基础色彩 */
+    --ground: #F5F5F7;
+    --surface1: #FFFFFF;
+    --surface2: #FAFAFA;
+    --surface3: #F0F0F2;
+    --hairline: #D2D2D7;
+    --text-primary: #1D1D1F;
+    --text-secondary: #86868B;
+    --text-muted: #AEAEB2;
+
+    /* 语义别名 */
+    --color-bg-primary: var(--ground);
+    --color-bg-secondary: var(--surface1);
+    --color-bg-card: var(--surface1);
+    --color-bg-input: var(--surface2);
+    --color-bg-hover: var(--surface3);
+    --color-bg-overlay: rgba(0, 0, 0, 0.35);
+
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-muted: var(--text-muted);
+    --color-text-inverse: #FFFFFF;
+
+    --color-border: var(--hairline);
+    --color-border-light: #E5E5EA;
+
+    /* 强调色 — Apple 蓝 */
+    --color-accent: #0071E3;
+    --color-accent-hover: #0077ED;
+    --color-accent-light: rgba(0, 113, 227, 0.08);
+
+    /* 语义色 */
+    --color-success: #34C759;
+    --color-danger: #FF3B30;
+    --color-warning: #FF9500;
+    --color-info: #0071E3;
+
+    /* Diff */
+    --color-diff-add: rgba(52, 199, 89, 0.1);
+    --color-diff-add-text: #248A3D;
+    --color-diff-remove: rgba(255, 59, 48, 0.1);
+    --color-diff-remove-text: #D32F2F;
+    --color-diff-change: rgba(255, 149, 0, 0.1);
+    --color-diff-change-text: #B26A00;
+
+    /* 滚动条 */
+    --color-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+    --color-scrollbar-track: transparent;
+
+    /* 兼容 */
+    --color-bg-sidebar: #1D1D1F;
+    --color-bg-sidebar-hover: rgba(255, 255, 255, 0.08);
+    --color-bg-sidebar-active: rgba(255, 255, 255, 0.14);
+    --color-text-sidebar: rgba(255, 255, 255, 0.6);
+    --color-text-sidebar-active: #FFFFFF;
+    --sidebar-glass-bg: #1D1D1F;
+    --sidebar-glass-border: rgba(255, 255, 255, 0.08);
+
+    /* v4: 毛玻璃导航 */
+    --nav-glass-bg: rgba(255, 255, 255, 0.7);
+    --nav-glass-blur: 16px;
+    --nav-border-gradient: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 113, 227, 0.12) 25%,
+        rgba(139, 92, 246, 0.12) 50%,
+        rgba(236, 72, 153, 0.1) 75%,
+        transparent 100%
+    );
+}

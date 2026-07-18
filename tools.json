@@ -1,0 +1,284 @@
+{
+    "_comment": "工具配置注册表 - 分组: 日常工具 / 格式化 / 编码转换 / 生成工具 / AI 工具 / 开发工具 / 办公工具 / 构建工具 / 趣味工具",
+    "tools": [
+        {
+            "id": "calculator",
+            "name": "计算器",
+            "icon": "🔢",
+            "description": "标准计算器，支持加减乘除、小数点运算",
+            "category": "日常工具",
+            "module": "js/modules/calculator.js",
+            "enabled": true
+        },
+        {
+            "id": "random-picker",
+            "name": "随机选择器",
+            "icon": "🎲",
+            "description": "输入候选项，随机抽取结果，支持去重和历史记录",
+            "category": "日常工具",
+            "module": "js/modules/random-picker.js",
+            "enabled": true
+        },
+        {
+            "id": "ip-lookup",
+            "name": "IP 查询",
+            "icon": "🌐",
+            "description": "查询 IP 地址详情，包含国家、城市、ISP、时区等信息",
+            "category": "日常工具",
+            "module": "js/modules/ip-lookup.js",
+            "enabled": true
+        },
+        {
+            "id": "json-formatter",
+            "name": "JSON 格式化",
+            "icon": "📋",
+            "description": "JSON 格式化/压缩，语法错误检测",
+            "category": "格式化",
+            "module": "js/modules/json-formatter.js",
+            "enabled": true
+        },
+        {
+            "id": "markdown-preview",
+            "name": "Markdown 预览",
+            "icon": "📄",
+            "description": "Markdown 实时预览，GitHub 风格渲染",
+            "category": "格式化",
+            "module": "js/modules/markdown-preview.js",
+            "enabled": true
+        },
+        {
+            "id": "base64",
+            "name": "Base64 编解码",
+            "icon": "🔐",
+            "description": "Base64 编码与解码转换",
+            "category": "编码转换",
+            "module": "js/modules/base64.js",
+            "enabled": true
+        },
+        {
+            "id": "timestamp-converter",
+            "name": "时间戳转换",
+            "icon": "🕐",
+            "description": "时间戳与日期互转，支持秒/毫秒切换",
+            "category": "编码转换",
+            "module": "js/modules/timestamp-converter.js",
+            "enabled": true
+        },
+        {
+            "id": "text-diff",
+            "name": "文本对比",
+            "icon": "📝",
+            "description": "逐行比较文本差异，高亮显示变更",
+            "category": "日常工具",
+            "module": "js/modules/text-diff.js",
+            "enabled": true
+        },
+        {
+            "id": "color-picker",
+            "name": "颜色选择器",
+            "icon": "🎨",
+            "description": "颜色选择和多种格式转换",
+            "category": "日常工具",
+            "module": "js/modules/color-picker.js",
+            "enabled": true
+        },
+        {
+            "id": "qrcode",
+            "name": "二维码生成",
+            "icon": "📱",
+            "description": "在线生成二维码，支持 URL/文本",
+            "category": "生成工具",
+            "module": "js/modules/qrcode.js",
+            "enabled": true
+        },
+        {
+            "id": "regex-tester",
+            "name": "正则测试",
+            "icon": "🔍",
+            "description": "正则表达式在线测试，支持标志位和常用正则",
+            "category": "日常工具",
+            "module": "js/modules/regex-tester.js",
+            "enabled": true
+        },
+        {
+            "id": "token-counter",
+            "name": "Token 估算器",
+            "icon": "🧮",
+            "description": "估算文本的 Token 数量，支持多模型费用预估",
+            "category": "AI 工具",
+            "module": "js/modules/token-counter.js",
+            "enabled": true
+        },
+        {
+            "id": "prompt-templates",
+            "name": "Prompt 模板库",
+            "icon": "📚",
+            "description": "预置常用 Prompt 模板，分类浏览、搜索、一键复制",
+            "category": "AI 工具",
+            "module": "js/modules/prompt-templates.js",
+            "enabled": true
+        },
+        {
+            "id": "password-generator",
+            "name": "密码生成器",
+            "icon": "🔑",
+            "description": "随机生成强密码，自定义长度和字符集，强度评估",
+            "category": "日常工具",
+            "module": "js/modules/password-generator.js",
+            "enabled": true
+        },
+        {
+            "id": "pomodoro-timer",
+            "name": "番茄钟",
+            "icon": "🍅",
+            "description": "番茄工作法计时器，25分钟专注/5分钟休息，支持浏览器通知",
+            "category": "日常工具",
+            "module": "js/modules/pomodoro-timer.js",
+            "enabled": true
+        },
+        {
+            "id": "uuid-generator",
+            "name": "ID 生成器",
+            "icon": "🆔",
+            "description": "批量生成 UUID v4 / ULID / 短ID，支持去重和导出",
+            "category": "开发工具",
+            "module": "js/modules/uuid-generator.js",
+            "enabled": true
+        },
+        {
+            "id": "url-encoder",
+            "name": "URL 编解码",
+            "icon": "🔗",
+            "description": "URL 编码与解码，支持 encodeURIComponent/decodeURIComponent",
+            "category": "开发工具",
+            "module": "js/modules/url-encoder.js",
+            "enabled": true
+        },
+        {
+            "id": "text-dedupe",
+            "name": "文本去重排序",
+            "icon": "📑",
+            "description": "文本去重（保留首次/末次）、排序、去除空行，办公必备",
+            "category": "办公工具",
+            "module": "js/modules/text-dedupe.js",
+            "enabled": true
+        },
+        {
+            "id": "gitignore-generator",
+            "name": ".gitignore 生成器",
+            "icon": "📝",
+            "description": "多选技术栈标签，实时生成合并 .gitignore 文件，支持搜索和下载",
+            "category": "构建工具",
+            "module": "js/modules/gitignore-generator.js",
+            "enabled": true
+        },
+        {
+            "id": "color-converter",
+            "name": "颜色格式转换",
+            "icon": "🎨",
+            "description": "HEX/RGB/HSL/HSV 互转，实时预览，Material Design 调色板",
+            "category": "开发工具",
+            "module": "js/modules/color-converter.js",
+            "enabled": true
+        },
+        {
+            "id": "unit-converter",
+            "name": "单位换算",
+            "icon": "📐",
+            "description": "长度/重量/温度/面积/体积/速度/数据存储 一键换算",
+            "category": "日常工具",
+            "module": "js/modules/unit-converter.js",
+            "enabled": true
+        },
+        {
+            "id": "base-converter",
+            "name": "进制转换",
+            "icon": "🔢",
+            "description": "2/8/10/16/32/36 进制一键转换，支持前缀自动识别",
+            "category": "开发工具",
+            "module": "js/modules/base-converter.js",
+            "enabled": true
+        },
+        {
+            "id": "hash-generator",
+            "name": "哈希生成器",
+            "icon": "🔐",
+            "description": "MD5/SHA-1/SHA-256/SHA-512 哈希计算，支持 HMAC",
+            "category": "开发工具",
+            "module": "js/modules/hash-generator.js",
+            "enabled": true
+        },
+        {
+            "id": "word-counter",
+            "name": "字数统计",
+            "icon": "📊",
+            "description": "实时统计字符/汉字/单词/行/段落/标点数",
+            "category": "办公工具",
+            "module": "js/modules/word-counter.js",
+            "enabled": true
+        },
+        {
+            "id": "chinese-converter",
+            "name": "简繁转换",
+            "icon": "🈶",
+            "description": "简体↔繁体双向转换，100+常用词汇对照",
+            "category": "办公工具",
+            "module": "js/modules/chinese-converter.js",
+            "enabled": true
+        },
+        {
+            "id": "date-calculator",
+            "name": "日期计算器",
+            "icon": "📅",
+            "description": "日期差计算、日期推算、星期显示、快捷按钮",
+            "category": "日常工具",
+            "module": "js/modules/date-calculator.js",
+            "enabled": true
+        },
+        {
+            "id": "morse-code",
+            "name": "摩斯电码",
+            "icon": "📻",
+            "description": "文本↔摩斯电码转换，播放声音，对照表参考",
+            "category": "趣味工具",
+            "module": "js/modules/morse-code.js",
+            "enabled": true
+        },
+        {
+            "id": "snake-game",
+            "name": "贪吃蛇",
+            "icon": "🐍",
+            "description": "经典贪吃蛇游戏，方向键/触摸滑动控制，加速机制",
+            "category": "趣味工具",
+            "module": "js/modules/snake-game.js",
+            "enabled": true
+        },
+        {
+            "id": "minesweeper",
+            "name": "扫雷",
+            "icon": "💣",
+            "description": "经典扫雷游戏，三档难度，左键翻开/右键标旗",
+            "category": "趣味工具",
+            "module": "js/modules/minesweeper.js",
+            "enabled": true
+        },
+        {
+            "id": "game-2048",
+            "name": "2048",
+            "icon": "🧩",
+            "description": "经典2048数字游戏，方向键/触摸滑动，最高分记录",
+            "category": "趣味工具",
+            "module": "js/modules/game-2048.js",
+            "enabled": true
+        },
+        {
+            "id": "vampire-survivors",
+            "name": "吸血鬼幸存者",
+            "icon": "🦇",
+            "description": "吸血鬼幸存者风格肉鸽，自动射击、杀敌升级、随机强化",
+            "category": "趣味工具",
+            "module": "js/modules/vampire-survivors.js",
+            "enabled": true
+        }
+    ]
+}

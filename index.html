@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开发工具箱</title>
+    <!-- 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- 样式 -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/themes/light.css" id="theme-style">
+</head>
+<body>
+    <!-- ============================================
+    顶部导航栏 — 48px
+    ============================================ -->
+    <nav class="top-nav" id="top-nav">
+        <div class="nav-left">
+            <span class="nav-logo-text">🧰 开发工具箱</span>
+        </div>
+        <div class="nav-right">
+            <!-- Ctrl+K 搜索触发 -->
+            <button class="search-chip" id="search-chip" title="搜索工具 (Ctrl+K)">
+                <svg class="chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>搜索工具</span>
+                <kbd>Ctrl K</kbd>
+            </button>
+            <!-- 主题切换 -->
+            <button class="theme-toggle-btn" id="theme-toggle" title="切换主题">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <!-- 设置 -->
+            <div class="settings-dropdown" id="settings-dropdown">
+                <button class="settings-gear-btn" id="settings-toggle" title="设置">⚙</button>
+                <div class="settings-menu" id="settings-menu">
+                    <div class="settings-group">
+                        <label class="settings-label">强调色</label>
+                        <div class="accent-options" id="accent-options">
+                            <button class="accent-btn active" data-accent="#0071E3" style="background:#0071E3" title="蓝色"></button>
+                            <button class="accent-btn" data-accent="#27AE60" style="background:#27AE60" title="绿色"></button>
+                            <button class="accent-btn" data-accent="#8E44AD" style="background:#8E44AD" title="紫色"></button>
+                            <button class="accent-btn" data-accent="#E67E22" style="background:#E67E22" title="橙色"></button>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <label class="settings-label">字体大小</label>
+                        <div class="font-size-options" id="font-size-options">
+                            <button class="size-btn" data-size="small">小</button>
+                            <button class="size-btn active" data-size="medium">中</button>
+                            <button class="size-btn" data-size="large">大</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================
+    主内容区
+    ============================================ -->
+    <main class="main-content" id="main-content">
+        <!-- 工具标题栏 -->
+        <header class="tool-header" id="tool-header" style="display:none">
+            <button class="back-btn" id="back-btn" title="返回 (Esc)">←</button>
+            <div class="tool-header-info">
+                <h2 id="tool-title"></h2>
+                <p id="tool-desc"></p>
+            </div>
+        </header>
+
+        <!-- 工具内容 / 欢迎页 -->
+        <section class="tool-body" id="tool-body">
+            <!-- 欢迎屏幕 + 工具网格（由 JS 渲染） -->
+        </section>
+    </main>
+
+    <!-- 右下角快捷键提示 -->
+    <div class="shortcut-hint" id="shortcut-hint">
+        <kbd>Ctrl</kbd>+<kbd>K</kbd> 搜索工具
+    </div>
+
+    <!-- ============================================
+    脚本
+    ============================================ -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

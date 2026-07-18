@@ -1,0 +1,78 @@
+/* ============================================
+   暗色主题 — v4 暗色适配
+   暗色微渐变：深色基底 + 暗蓝紫光晕
+   毛玻璃导航变暗 · 卡片变半透明暗色
+   ============================================ */
+
+:root {
+    /* 基础色彩（暗色配方） */
+    --ground: #0D0E12;
+    --surface1: #16171C;
+    --surface2: #1E1F26;
+    --surface3: #26272E;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F0F0F2;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+
+    /* 语义别名 */
+    --color-bg-primary: var(--ground);
+    --color-bg-secondary: var(--surface1);
+    --color-bg-card: var(--surface1);
+    --color-bg-input: var(--surface2);
+    --color-bg-hover: var(--surface3);
+    --color-bg-overlay: rgba(0, 0, 0, 0.6);
+
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-muted: var(--text-muted);
+    --color-text-inverse: #0D0E12;
+
+    --color-border: var(--hairline);
+    --color-border-light: rgba(255, 255, 255, 0.03);
+
+    /* 强调色 */
+    --color-accent: #5E6AD2;
+    --color-accent-hover: #6F7AE0;
+    --color-accent-light: rgba(94, 106, 210, 0.12);
+
+    /* 语义色 */
+    --color-success: #22c55e;
+    --color-success-hover: #16a34a;
+    --color-danger: #ef4444;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
+
+    /* Diff（暗色调适配） */
+    --color-diff-add: rgba(34, 197, 94, 0.12);
+    --color-diff-add-text: #7ee787;
+    --color-diff-remove: rgba(239, 68, 68, 0.12);
+    --color-diff-remove-text: #f87179;
+    --color-diff-change: rgba(245, 158, 11, 0.12);
+    --color-diff-change-text: #fbbf24;
+
+    /* 滚动条 */
+    --color-scrollbar-thumb: rgba(255, 255, 255, 0.12);
+    --color-scrollbar-track: transparent;
+
+    /* 侧边栏变量（兼容旧代码） */
+    --color-bg-sidebar: #0D0E12;
+    --color-bg-sidebar-hover: rgba(255, 255, 255, 0.06);
+    --color-bg-sidebar-active: rgba(255, 255, 255, 0.1);
+    --color-text-sidebar: rgba(255, 255, 255, 0.55);
+    --color-text-sidebar-active: #F0F0F2;
+    --sidebar-glass-bg: #0D0E12;
+    --sidebar-glass-border: rgba(255, 255, 255, 0.06);
+
+    /* v4: 毛玻璃导航 — 暗色版 */
+    --nav-glass-bg: rgba(13, 14, 18, 0.75);
+    --nav-glass-blur: 16px;
+    --nav-border-gradient: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(94, 106, 210, 0.15) 25%,
+        rgba(139, 92, 246, 0.15) 50%,
+        rgba(236, 72, 153, 0.1) 75%,
+        transparent 100%
+    );
+}
