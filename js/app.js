@@ -139,7 +139,7 @@ async function loadTools() {
         const importPromises = config.tools.map(async (toolConfig) => {
             if (!toolConfig.enabled) return null;
             try {
-                const module = await import(`./modules/${toolConfig.id}.js`);
+                const module = await import(`./modules/${toolConfig.id}.js?v=${Date.now()}`);
                 const tool = Object.assign({}, toolConfig, {
                     id: module.id,
                     name: module.name,
