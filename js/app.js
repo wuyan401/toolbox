@@ -146,7 +146,6 @@ async function loadTools() {
                     icon: module.icon,
                     description: module.description,
                     category: module.category,
-                    enabled: module.enabled,
                     init: module.init
                 });
                 return tool;
