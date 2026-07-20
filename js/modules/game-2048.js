@@ -39,14 +39,18 @@ const st=document.createElement('style');st.textContent=
 .t-u{transform:perspective(600px) rotateX(6deg)}.t-d{transform:perspective(600px) rotateX(-6deg)}`;
 c.appendChild(st);
 
-window.addEventListener('keydown',kh);
+window.addEventListener('keydown', keyHandler);
 ng();}
 
-function ng(){g=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];sc=0;us();sn();sn();r(true);}
+function keyHandler(e) {
+    if (!running) return;
+    const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+    if (m[e.key]) { e.preventDefault(); mv(m[e.key]); }
+}
+
+function ng() {g=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];sc=0;us();sn();sn();r(true);}
 
 function sn(){const e=[];for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(!g[r][c])e.push([r,c]);if(e.length){const[p,q]=e[Math.random()*e.length|0];g[p][q]=Math.random()<.9?2:4;}}
-
-function kh(e){if(!running)return;const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};if(m[e.key]){e.preventDefault();mv(m[e.key]);}}
 
 function mv(dir){_t.forEach(clearTimeout);_t=[];oldG=g.map(r=>[...r]);const merged=Array.from({length:4},()=>[false,false,false,false]);const d=dir==='left'?{r:0,c:1,dr:0,dc:-1,n:0,ir:0,ic:3}:
  dir==='right'?{r:0,c:-1,dr:0,dc:1,n:3,ir:0,ic:0}:dir==='up'?{r:1,c:0,dr:-1,dc:0,n:0,ir:3,ic:0}:
@@ -87,5 +91,5 @@ function renderSlide(matches){
 
 function us(){document.querySelector('#k9s').textContent=sc;if(sc>best){best=sc;try{localStorage.setItem(B,best)}catch{}}document.querySelector('#k9x').textContent=best;}
 
-export function cleanup(){window.removeEventListener('keydown',kh);running=false;}
+export function cleanup(){window.removeEventListener('keydown',keyHandler);running=false;}
 export {init};
