@@ -3,6 +3,7 @@ export const name = '2048';
 export const icon = '🔢';
 export const description = '经典2048数字游戏，方向键/WASD移动，滑动合成';
 export const category = '趣味工具';
+export const enabled = true;
 
 export function init(container) {
     const SIZE = 4, GAP = 8, CELL = 80;
