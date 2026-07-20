@@ -7,6 +7,7 @@ export const category = '趣味工具';
 let g, tl, bd, sc, best, oldG, _t, running;
 
 export function init(c) {
+    try {
     running = true;
     _t = [];
     best = Math.max(best, +((() => {
@@ -45,6 +46,7 @@ export function init(c) {
     c.querySelector('#r2048').onclick = ng;
     document.addEventListener('keydown', kh);
     ng();
+    } catch(e) { c.innerHTML = '<h3 style=\"color:red\">2048 Error: '+e.message+'</h3>'; }
 }
 
 function ng() {
