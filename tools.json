@@ -238,8 +238,8 @@
         {
             "id": "morse-code",
             "name": "摩斯电码",
-            "icon": "📻",
-            "description": "文本↔摩斯电码转换，播放声音，对照表参考",
+            "icon": "📟",
+            "description": "文字与摩斯电码互相转换，支持播放音频",
             "category": "趣味工具",
             "module": "js/modules/morse-code.js",
             "enabled": true
@@ -257,7 +257,7 @@
             "id": "minesweeper",
             "name": "扫雷",
             "icon": "💣",
-            "description": "经典扫雷游戏，三档难度，左键翻开/右键标旗",
+            "description": "经典扫雷游戏，支持红旗标记和自动展开",
             "category": "趣味工具",
             "module": "js/modules/minesweeper.js",
             "enabled": true
@@ -275,7 +275,7 @@
             "id": "vampire-survivors",
             "name": "吸血鬼幸存者",
             "icon": "🦇",
-            "description": "吸血鬼幸存者风格肉鸽，自动射击、杀敌升级、随机强化",
+            "description": "Canvas肉鸽生存游戏，3职业/7怪物/Boss/掉落/光剑/冲刺/自动寻路",
             "category": "趣味工具",
             "module": "js/modules/vampire-survivors.js",
             "enabled": true
