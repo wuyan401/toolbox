@@ -6,7 +6,7 @@ export const category = '趣味工具';
 export const enabled = true;
 
 export function init(container) {
-    const G = 16, C = 107, W = 4*C+G;
+    const G = 12, C = 95, W = 4*C + 5*G;
     let grid, score, best, running = true, _t = [];
     let tilePool = [];
 
@@ -19,13 +19,13 @@ export function init(container) {
                 <div style="text-align:center"><div style="font-size:11px;color:#999">最高</div><div id="x" style="font-size:22px;font-weight:700;color:#fff">${best}</div></div>
                 <button class="btn btn-sm" id="r" style="align-self:center">新游戏</button>
             </div>
-            <div id="o" style="position:relative;width:${W}px;height:${W}px;margin:0 auto;background:rgba(187,173,160,.35);border-radius:12px;padding:${G}px;transition:transform .15s;transform-origin:center center">
-                <div id="p" style="position:relative;width:100%;height:100%"></div>
+            <div id="o" style="position:relative;width:${W}px;height:${W}px;margin:0 auto;background:rgba(187,173,160,.35);border-radius:12px;transition:transform .15s;transform-origin:center center">
             </div>
             <div style="color:#666;font-size:11px;margin-top:8px">↑↓←→ / WASD</div>
         </div>`;
 
-    const O = container.querySelector('#o'), P = container.querySelector('#p');
+    const O = container.querySelector('#o');
+
     const S = container.querySelector('#s'), X = container.querySelector('#x');
 
     const cs = document.createElement('style'); cs.textContent = `
@@ -52,7 +52,7 @@ export function init(container) {
     function ensurePool(n) {
         while (tilePool.length < n) {
             const d = document.createElement('div'); d.className = 't'; d.style.display = 'none';
-            P.appendChild(d); tilePool.push({ el: d, use: false });
+            O.appendChild(d); tilePool.push({ el: d, use: false });
         }
     }
 
@@ -62,7 +62,7 @@ export function init(container) {
 
         // 释放全部
         for (let t of tilePool) { t.use = false; t.el.style.display = 'none'; t.el.className = 't'; t.el.style.transform = ''; t.el.style.opacity = ''; t.el.style.fontSize = ''; }
-        P.querySelectorAll('.t').forEach(d => { d.style.display = 'none'; });
+        O.querySelectorAll('.t').forEach(d => { d.style.display = 'none'; });
 
         let pi = 0;
         for (let f of flats) {
@@ -71,8 +71,8 @@ export function init(container) {
             const t = tilePool[pi]; t.use = true; const d = t.el;
             d.style.display = 'flex'; d.className = 't c'+f.v; d.textContent = f.v;
             d.style.fontSize = tileSize(f.v) + 'px';
-            d.style.left = (f.c*(C+G)+G) + 'px';
-            d.style.top = (f.r*(C+G)+G) + 'px';
+            d.style.left = (f.c*C + (f.c+1)*G) + 'px';
+            d.style.top = (f.r*C + (f.r+1)*G) + 'px';
             d.style.width = d.style.height = C+'px';
 
             if (anim) {
