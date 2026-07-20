@@ -77,12 +77,15 @@ export function init(container) {
             gap: var(--spacing-lg);
         }
         .wc-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: var(--spacing-sm);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
         }
         .wc-stat-card {
-            padding: var(--spacing-lg);
+            flex: 0 0 auto;
+            min-width: 90px;
+            padding: 10px 14px;
             background: var(--color-bg-secondary);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-lg);
