@@ -279,6 +279,60 @@
             "category": "趣味工具",
             "module": "js/modules/vampire-survivors.js",
             "enabled": true
+        },
+        {
+            "id": "image-to-base64",
+            "name": "图片转Base64",
+            "icon": "📷",
+            "description": "图片文件转Base64编码，支持预览和复制",
+            "category": "日常工具",
+            "module": "js/modules/image-to-base64.js",
+            "enabled": true
+        },
+        {
+            "id": "json-csv",
+            "name": "JSON↔CSV",
+            "icon": "🔄",
+            "description": "JSON与CSV互相转换，支持复杂嵌套",
+            "category": "格式化",
+            "module": "js/modules/json-csv.js",
+            "enabled": true
+        },
+        {
+            "id": "text-encrypt",
+            "name": "文本加密",
+            "icon": "🔐",
+            "description": "AES-GCM/凯撒密码加密解密",
+            "category": "生成工具",
+            "module": "js/modules/text-encrypt.js",
+            "enabled": true
+        },
+        {
+            "id": "gradient-maker",
+            "name": "渐变生成器",
+            "icon": "🎨",
+            "description": "CSS渐变背景生成，实时预览一键复制",
+            "category": "生成工具",
+            "module": "js/modules/gradient-maker.js",
+            "enabled": true
+        },
+        {
+            "id": "memo-pad",
+            "name": "备忘录",
+            "icon": "📝",
+            "description": "快速记录便签，自动保存到本地",
+            "category": "日常工具",
+            "module": "js/modules/memo-pad.js",
+            "enabled": true
+        },
+        {
+            "id": "barcode-maker",
+            "name": "条形码生成",
+            "icon": "📊",
+            "description": "Code128条形码生成，支持下载PNG",
+            "category": "生成工具",
+            "module": "js/modules/barcode-maker.js",
+            "enabled": true
         }
     ]
 }
