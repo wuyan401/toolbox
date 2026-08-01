@@ -352,22 +352,21 @@ export function init(container) {
     function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
     container.querySelector('#sf-save').onclick = () => {
-        const data = grid.map(row => row.map(c => c || '.').join('')).join('|');
-        safeSet('starforge-design', data);
-        flash('✅ 设计已保存');
+        try {
+            localStorage.setItem('starforge-design', JSON.stringify(grid));
+            flash('✅ 设计已保存');
+        } catch (e) { flash('⚠️ 保存失败'); }
     };
     container.querySelector('#sf-load').onclick = () => {
-        const data = safeGet('starforge-design', '');
-        if (!data) { flash('⚠️ 没有已保存的设计'); return; }
-        const rows = data.split('|');
-        for (let y = 0; y < GRID; y++) {
-            for (let x = 0; x < GRID; x++) {
-                const ch = rows[y] ? rows[y][x] : '.';
-                grid[y][x] = ch !== '.' ? ch : null;
-            }
-        }
-        drawBuild();
-        flash('📂 设计已加载');
+        try {
+            const data = localStorage.getItem('starforge-design');
+            if (!data) { flash('⚠️ 没有已保存的设计'); return; }
+            const g = JSON.parse(data);
+            if (!Array.isArray(g) || g.length !== GRID) throw new Error('数据损坏');
+            grid = g;
+            drawBuild();
+            flash('📂 设计已加载');
+        } catch (e) { flash('⚠️ 加载失败: 数据损坏'); }
     };
     container.querySelector('#sf-clear').onclick = () => {
         grid = Array.from({ length: GRID }, () => new Array(GRID).fill(null));
