@@ -32,6 +32,8 @@ export function init(container) {
         <button id="sf-battle" style="padding:6px 16px;border-radius:8px;border:1px solid #ff5252;background:rgba(255,82,82,.15);color:#ff8a80;cursor:pointer;font-size:13px;font-family:inherit">⚔️ 战斗</button>
         <button id="sf-build" style="padding:6px 16px;border-radius:8px;border:1px solid #40c4ff;background:rgba(64,196,255,.15);color:#80d8ff;cursor:pointer;font-size:13px;font-family:inherit">🛠️ 建造</button>
         <span style="font-size:12px;color:#80d8ff;letter-spacing:2px" id="sf-mode">建造模式</span>
+        <button id="sf-wmode" style="padding:6px 12px;border-radius:8px;border:1px solid #69f0ae;background:rgba(105,240,174,.12);color:#b9f6ca;cursor:pointer;font-size:12px;font-family:inherit">🎮 自动</button>
+        <button id="sf-keys" style="padding:6px 12px;border-radius:8px;border:1px solid #ffd54a;background:rgba(255,213,74,.12);color:#ffe082;cursor:pointer;font-size:12px;font-family:inherit">⌨️ 键位</button>
         <span style="margin-left:auto"></span>
         <button id="sf-save" style="padding:6px 12px;border-radius:8px;border:1px solid #b388ff;background:rgba(179,136,255,.12);color:#d1c4e9;cursor:pointer;font-size:12px;font-family:inherit">💾 保存</button>
         <button id="sf-load" style="padding:6px 12px;border-radius:8px;border:1px solid #ffd54a;background:rgba(255,213,74,.12);color:#ffe082;cursor:pointer;font-size:12px;font-family:inherit">📂 加载</button>
@@ -47,7 +49,9 @@ export function init(container) {
             🖱️ 左键放置 / 右键删除<br>
             🖲️ 滚轮缩放画面<br>
             ⚔️ 战斗中: WASD移动<br>
-            鼠标=舰首瞄准 自动开火
+            鼠标=舰首瞄准<br>
+            🎮 切手动: 按键开火<br>
+            ⌨️ 键位可自定义
           </div>
         </div>
         <div style="flex:1;min-width:520px">
@@ -81,43 +85,129 @@ export function init(container) {
     let mouse = { x: -1, y: -1 };        // 鼠标世界位置(建造)
     let aim = { x: 480, y: 320 };        // 战斗中鼠标瞄准点
 
-    // ===== 像素纹理 (10×10, 更精致) =====
+    // ===== 武器模式 + 按键绑定 =====
+    let weaponMode = 'auto'; // auto | manual
+    let bindings = { laser: 'j', cannon: 'k', missile: 'l' };
+    try {
+        const s = JSON.parse(localStorage.getItem('starforge-bindings') || 'null');
+        if (s) bindings = Object.assign(bindings, s);
+    } catch (e) {}
+    function saveBindings() { try { localStorage.setItem('starforge-bindings', JSON.stringify(bindings)); } catch (e) {} }
+
+    // 键位编辑器弹窗
+    function openKeyEditor() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;display:flex;align-items:center;justify-content:center';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:linear-gradient(180deg,#0b1735,#140b2e);border:1px solid rgba(64,196,255,.4);border-radius:14px;padding:20px;min-width:340px;font-family:Consolas,monospace;color:#cfe8ff;box-shadow:0 0 30px rgba(64,196,255,.2)';
+        box.innerHTML = `
+            <div style="font-size:15px;font-weight:700;color:#80d8ff;margin-bottom:4px">⌨️ 武器按键绑定</div>
+            <div style="font-size:12px;color:#5c7fa3;margin-bottom:12px">点击按键进行修改，再按下新按键（战斗时按绑定键手动开火）</div>
+            <div id="kb-rows"></div>
+            <button id="kb-close" style="margin-top:14px;width:100%;padding:8px;border-radius:8px;border:1px solid #40c4ff;background:rgba(64,196,255,.15);color:#80d8ff;cursor:pointer;font-family:inherit">✔ 完成</button>`;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        let editing = null;
+        const rows = box.querySelector('#kb-rows');
+        function renderRows() {
+            rows.innerHTML = '';
+            for (const key of ['laser', 'cannon', 'missile']) {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin:4px 0;border-radius:8px;background:rgba(0,20,60,.5);border:1px solid rgba(64,196,255,.2);cursor:pointer;transition:border-color .15s';
+                row.innerHTML = `<span>${MODULES[key].icon} ${MODULES[key].name}</span><span id="kb-${key}" style="background:#1a2a55;padding:3px 12px;border-radius:6px;font-weight:700;color:#ffd54a">${(bindings[key] || '?').toUpperCase()}</span>`;
+                row.onclick = () => {
+                    editing = key;
+                    document.querySelectorAll('#kb-rows div').forEach(r => r.style.borderColor = 'rgba(64,196,255,.2)');
+                    row.style.borderColor = '#ffd54a';
+                    const lbl = document.getElementById('kb-' + key);
+                    lbl.textContent = '按任意键...';
+                    lbl.style.color = '#69f0ae';
+                };
+                rows.appendChild(row);
+            }
+        }
+        renderRows();
+        const onKey = e => {
+            e.preventDefault();
+            if (!editing) return;
+            const k = e.key.toLowerCase();
+            const ok = (k.length === 1 && k >= 'a' && k <= 'z') || [' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(k);
+            if (ok) {
+                bindings[editing] = k;
+                saveBindings();
+            }
+            editing = null;
+            renderRows();
+        };
+        window.addEventListener('keydown', onKey);
+        const close = () => { window.removeEventListener('keydown', onKey); overlay.remove(); };
+        box.querySelector('#kb-close').onclick = close;
+        overlay.onclick = e => { if (e.target === overlay) close(); };
+    }
+
+    // ===== 像素纹理 (16×16, 1:1 绘制无缩放失真) =====
     function makeTexture(key) {
         const t = document.createElement('canvas');
-        t.width = 10; t.height = 10;
+        t.width = 16; t.height = 16;
         const c = t.getContext('2d');
         const M = MODULES[key];
         // 底
         c.fillStyle = M.color;
-        c.fillRect(0, 0, 10, 10);
-        // 斜面高光
-        c.fillStyle = 'rgba(255,255,255,.28)';
-        c.fillRect(0, 0, 10, 2);
-        c.fillRect(0, 0, 2, 10);
-        // 暗边
+        c.fillRect(0, 0, 16, 16);
+        // 斜面高光 (左上亮)
+        c.fillStyle = 'rgba(255,255,255,.3)';
+        c.fillRect(0, 0, 16, 2);
+        c.fillRect(0, 0, 2, 16);
+        // 暗边 (右下)
         c.fillStyle = 'rgba(0,0,0,.45)';
-        c.fillRect(0, 8, 10, 2);
-        c.fillRect(8, 0, 2, 10);
-        // 中心细节
-        c.fillStyle = 'rgba(255,255,255,.85)';
+        c.fillRect(0, 14, 16, 2);
+        c.fillRect(14, 0, 2, 16);
+        // 铆钉 (四角装饰)
+        c.fillStyle = 'rgba(255,255,255,.22)';
+        c.fillRect(3, 3, 2, 2); c.fillRect(11, 3, 2, 2);
+        c.fillRect(3, 11, 2, 2); c.fillRect(11, 11, 2, 2);
+        // 中心细节 (每个模块独特)
+        c.fillStyle = 'rgba(255,255,255,.9)';
         if (key === 'core') {
-            c.fillRect(3, 3, 4, 4); c.fillStyle = '#7a5c00'; c.fillRect(4, 4, 2, 2);
-        } else if (key === 'thruster') {
-            c.fillStyle = '#ff9e40'; c.fillRect(2, 7, 6, 3); c.fillStyle = '#fff'; c.fillRect(3, 8, 4, 1);
-        } else if (key === 'laser') {
-            c.fillRect(3, 3, 2, 2); c.fillRect(6, 3, 1, 4); c.fillStyle = '#ffd1d1';
-        } else if (key === 'cannon') {
-            c.fillStyle = '#5c3d00'; c.fillRect(4, 3, 3, 4); c.fillStyle = '#fff'; c.fillRect(4, 3, 1, 4);
-        } else if (key === 'missile') {
-            c.fillStyle = '#e8d5ff'; c.fillRect(2, 4, 6, 2); c.fillStyle = '#ff5252'; c.fillRect(4, 4, 2, 1);
-        } else if (key === 'shield') {
-            c.fillRect(2, 2, 2, 6); c.fillRect(6, 2, 2, 6); c.fillRect(4, 1, 2, 8);
-        } else if (key === 'reactor') {
-            c.fillRect(4, 0, 2, 3); c.fillRect(4, 7, 2, 3); c.fillRect(1, 4, 3, 2); c.fillRect(6, 4, 3, 2); c.fillStyle = '#fff';
-        } else if (key === 'capacitor') {
-            c.fillRect(2, 2, 1, 6); c.fillRect(7, 2, 1, 6); c.fillRect(4, 1, 2, 8);
+            c.fillStyle = '#8a6d00'; c.fillRect(4, 4, 8, 8);
+            c.fillStyle = '#ffd54a'; c.fillRect(6, 6, 4, 4);
+            c.fillStyle = '#fff'; c.fillRect(7, 7, 2, 2);
         } else if (key === 'armor') {
-            c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(1, 4, 8, 2); c.fillRect(4, 1, 2, 8);
+            c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(2, 7, 12, 2); c.fillRect(7, 2, 2, 12);
+            c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(4, 4, 2, 8); c.fillRect(10, 4, 2, 8);
+        } else if (key === 'thruster') {
+            c.fillStyle = '#7a3d00'; c.fillRect(2, 9, 12, 5);
+            c.fillStyle = '#ff9e40'; c.fillRect(3, 10, 10, 3);
+            c.fillStyle = '#fff'; c.fillRect(5, 11, 6, 1);
+        } else if (key === 'laser') {
+            c.fillStyle = '#9c1f1f'; c.fillRect(5, 3, 2, 10);
+            c.fillStyle = '#ff5252'; c.fillRect(6, 4, 3, 8);
+            c.fillStyle = '#fff'; c.fillRect(7, 5, 2, 6);
+        } else if (key === 'cannon') {
+            c.fillStyle = '#5c3d00'; c.fillRect(3, 5, 10, 6);
+            c.fillStyle = '#8a6d00'; c.fillRect(5, 4, 6, 8);
+            c.fillStyle = '#ff9100'; c.fillRect(6, 6, 4, 4);
+            c.fillStyle = '#3a2600'; c.fillRect(2, 5, 2, 6);
+        } else if (key === 'missile') {
+            c.fillStyle = '#e8d5ff'; c.fillRect(3, 6, 10, 4);
+            c.fillStyle = '#b388ff'; c.fillRect(5, 5, 6, 6);
+            c.fillStyle = '#ff5252'; c.fillRect(6, 6, 4, 2);
+            c.fillStyle = '#7c4dff'; c.fillRect(4, 8, 8, 1);
+        } else if (key === 'shield') {
+            c.fillStyle = 'rgba(255,255,255,.85)';
+            c.fillRect(3, 2, 2, 12); c.fillRect(11, 2, 2, 12);
+            c.fillRect(2, 4, 12, 2); c.fillRect(2, 10, 12, 2);
+            c.fillStyle = 'rgba(64,196,255,.6)'; c.fillRect(6, 5, 4, 6);
+        } else if (key === 'reactor') {
+            c.fillStyle = '#8a6d00';
+            c.fillRect(6, 1, 4, 5); c.fillRect(6, 10, 4, 5); c.fillRect(1, 6, 5, 4); c.fillRect(10, 6, 5, 4);
+            c.fillStyle = '#ffeb3b'; c.fillRect(7, 3, 2, 10); c.fillRect(3, 7, 10, 2);
+            c.fillStyle = '#fff'; c.fillRect(7, 7, 2, 2);
+        } else if (key === 'capacitor') {
+            c.fillStyle = 'rgba(255,255,255,.85)';
+            c.fillRect(3, 2, 2, 12); c.fillRect(11, 2, 2, 12);
+            c.fillStyle = '#69f0ae'; c.fillRect(5, 5, 6, 6);
+            c.fillStyle = '#2e7d5b'; c.fillRect(6, 6, 4, 4);
         }
         return t;
     }
@@ -177,7 +267,6 @@ export function init(container) {
 
     function place(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= GRID || gy >= GRID) return;
-        if (grid[gy][gx] === selected) { grid[gy][gx] = null; return; }
         grid[gy][gx] = selected;
     }
     function remove(gx, gy) {
@@ -508,6 +597,11 @@ export function init(container) {
         for (let i = B.bullets.length - 1; i >= 0; i--) {
             const b = B.bullets[i];
             if (b.dead) { B.bullets.splice(i, 1); continue; }
+            // 激光生命周期: 短暂存续后消散 (避免光束残留)
+            if (b.type === 'laser') {
+                b.life -= dt;
+                if (b.life <= 0) { B.bullets.splice(i, 1); continue; }
+            }
             if (b.track) {
                 const t = b.owner === 'player' ? nearestEnemy(b.x, b.y) : B.player;
                 if (t) {
@@ -577,6 +671,8 @@ export function init(container) {
     function fireWeapons(ship, dt, target) {
         const B = battle;
         if (!B) return;
+        // 手动模式下玩家不自动开火 (按绑定键手动发射)
+        if (ship.isPlayer && weaponMode === 'manual') return;
         for (const m of ship.mods) {
             const M = MODULES[m.key];
             if (!M.dmg || m.hp <= 0) continue;
@@ -591,7 +687,7 @@ export function init(container) {
             if (dist > M.range) continue;
             const ang = Math.atan2(tgt.y - gy, tgt.x - gx);
             if (m.key === 'laser') {
-                B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, dead: false });
+                B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, life: .12, dead: false });
                 muzz(gx, gy, '#ff5252');
             } else if (m.key === 'cannon') {
                 B.bullets.push({ type: 'cannon', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, dead: false });
@@ -614,6 +710,40 @@ export function init(container) {
             if (d < bd) { bd = d; best = e; }
         }
         return best;
+    }
+
+    // 手动发射: 按绑定键发射对应类型全部武器 (朝舰首/鼠标方向)
+    function manualFire(ship, key) {
+        const B = battle;
+        if (!B || ship.dead) return;
+        const M = MODULES[key];
+        if (!M || !M.dmg) return;
+        let fired = false;
+        for (const m of ship.mods) {
+            if (m.key !== key || m.hp <= 0) continue;
+            ship.cds[m.key] = (ship.cds[m.key] || 0) - 0;
+            if (ship.cds[m.key] > 0) continue;
+            if (ship.energy < M.energy * .2) continue;
+            const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
+            const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
+            // 手动模式发射方向 = 舰首 (鼠标瞄准方向)
+            const ang = ship.ang;
+            if (key === 'laser') {
+                B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: 'player', source: key, life: .12, dead: false });
+                muzz(gx, gy, '#ff5252');
+            } else if (key === 'cannon') {
+                B.bullets.push({ type: 'cannon', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: 'player', source: key, dead: false });
+                muzz(gx, gy, '#ff9100');
+            } else if (key === 'missile') {
+                B.bullets.push({ type: 'missile', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: 'player', source: key, track: true, trail: true, dead: false });
+                muzz(gx, gy, '#b388ff');
+            }
+            ship.cds[m.key] = 1 / M.rate;
+            ship.energy -= M.energy * .5;
+            fired = true;
+        }
+        // 无武器/无能量时提示
+        if (!fired) flash(`⚠️ 无${M.name}可用或能量不足`);
     }
 
     function modAtWorld(ship, wx, wy) {
@@ -863,7 +993,8 @@ export function init(container) {
             <span>🛡️ <b style="color:#40c4ff">${Math.round(p.shield)}</b>/${p.shieldMax}</span>
             <span>⚡ <b style="color:#ffeb3b">${p.energy.toFixed(0)}</b></span>
             <span>🚀 <b style="color:#80d8ff">${p.thrust}</b></span>
-            <span>⚔️ ${einfo || '无目标'}</span>`;
+            <span>⚔️ ${einfo || '无目标'}</span>
+            <span style="color:${weaponMode === 'auto' ? '#69f0ae' : '#ffd54a'}">${weaponMode === 'auto' ? '🔄 自动' : `🎮 [${(bindings.laser || '?').toUpperCase()}]激光 [${(bindings.cannon || '?').toUpperCase()}]加农 [${(bindings.missile || '?').toUpperCase()}]导弹`}</span>`;
     }
 
     function drawShip(ctx, ship, ox, oy) {
@@ -937,6 +1068,12 @@ export function init(container) {
         if (down && mode === 'battle' && battle) {
             if (k === 'r' && battle.result) startBattle();
             if (k === 'b' && battle.result) switchMode('build');
+            // 手动模式: 按绑定键开火
+            if (weaponMode === 'manual' && !battle.result) {
+                for (const wk in bindings) {
+                    if (bindings[wk] === k && battle.player) manualFire(battle.player, wk);
+                }
+            }
         }
     }
     window.addEventListener('keydown', e => onKey(e, true));
@@ -976,6 +1113,16 @@ export function init(container) {
     }
     container.querySelector('#sf-build').onclick = () => switchMode('build');
     container.querySelector('#sf-battle').onclick = startBattle;
+    // 武器模式切换
+    const wmodeBtn = container.querySelector('#sf-wmode');
+    wmodeBtn.onclick = () => {
+        weaponMode = weaponMode === 'auto' ? 'manual' : 'auto';
+        wmodeBtn.textContent = weaponMode === 'auto' ? '🎮 自动' : '🎮 手动';
+        wmodeBtn.style.borderColor = weaponMode === 'auto' ? '#69f0ae' : '#ffd54a';
+        wmodeBtn.style.color = weaponMode === 'auto' ? '#b9f6ca' : '#ffe082';
+        flash(weaponMode === 'auto' ? '🔄 自动开火模式' : `🎮 手动开火: [${bindings.laser.toUpperCase()}]激光 [${bindings.cannon.toUpperCase()}]加农 [${bindings.missile.toUpperCase()}]导弹`);
+    };
+    container.querySelector('#sf-keys').onclick = openKeyEditor;
 
     // ===== 主循环 =====
     function frame(ts) {
