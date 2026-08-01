@@ -180,8 +180,11 @@ export function init(container) {
         } else {
             for (let i = 0; i < d.length; i += 4) {
                 for (let ch = 0; ch < 3; ch++) {
-                    const low = d[i + ch] & mask;               // 提取低位
-                    d[i + ch] = (low << (8 - depth)) | (low << (8 - depth * 2)); // 放大到全范围
+                    const low = d[i + ch] & mask; // 提取低位
+                    // 位复制放大到全范围: low重复填充8位 (1位: 0/255, 2位: 0/85/170/255, 4位: 0/17..255)
+                    let v = 0;
+                    for (let b = 0; b < 8; b += depth) v |= low << (8 - depth - b);
+                    d[i + ch] = v;
                 }
             }
         }
