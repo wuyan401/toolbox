@@ -24,6 +24,8 @@ export function init(container) {
                     <option value="1">1轮</option>
                     <option value="2" selected>2轮</option>
                     <option value="4">4轮</option>
+                    <option value="8">8轮</option>
+                    <option value="16">16轮</option>
                 </select>
             </div>
             <div style="padding:16px;border:2px dashed var(--color-border);border-radius:12px;text-align:center;cursor:pointer" id="drop">
@@ -184,9 +186,7 @@ export function init(container) {
 
     function exec() {
         if (!img) return;
-        const curve = getCurve(algo.value);
         const r = +rounds.value;
-        const T = makeTransform(curve);
         const isObf = mode.value === 'obf';
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
@@ -197,14 +197,17 @@ export function init(container) {
         const d = imgData.data;
 
         // 每轮: 曲线序号翻转 T + 递增90°旋转 → 置换 perm
-        // T自逆且T²=I, 纯T多轮会塌缩; 叠加旋转后每轮置换不同
+        // 多曲线交替(hilbert→zorder→peano)打破单曲线对称巧合, 轮数再多也不塌缩
+        const curves = ['hilbert', 'zorder', 'peano'];
         const perms = [];
         for (let round = 0; round < r; round++) {
+            const curve2 = getCurve(curves[round % 3]);
+            const T2 = makeTransform(curve2);
             const ang = ((round + 1) * 90) % 360;
             const perm = new Int32Array(N * N);
             for (let y = 0; y < N; y++) {
                 for (let x = 0; x < N; x++) {
-                    let [nx, ny] = T(x, y);
+                    let [nx, ny] = T2(x, y);
                     if (ang === 90) { const t = nx; nx = ny; ny = N - 1 - t; }
                     else if (ang === 180) { nx = N - 1 - nx; ny = N - 1 - ny; }
                     else if (ang === 270) { const t = nx; nx = N - 1 - ny; ny = t; }

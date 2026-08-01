@@ -30,9 +30,10 @@ export function init(container) {
                 <div style="display:flex;gap:8px;align-items:center">
                     <span style="font-size:13px;color:var(--color-text-secondary)">嵌入深度:</span>
                     <select id="depth" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                        <option value="1">1位 (最隐蔽)</option>
-                        <option value="2" selected>2位 (平衡)</option>
-                        <option value="4">4位 (清晰但可见)</option>
+                        <option value="8" selected>8位 完整嵌入 (载体变灰, 无损还原)</option>
+                        <option value="4">4位 (载体稍损, 还原清晰)</option>
+                        <option value="2">2位 (载体微损, 还原一般)</option>
+                        <option value="1">1位 (载体无损, 还原模糊)</option>
                     </select>
                     <button class="btn btn-primary" id="goHide" style="margin-left:auto">⚡ 隐藏</button>
                 </div>
@@ -53,9 +54,10 @@ export function init(container) {
                 <div style="display:flex;gap:8px;align-items:center">
                     <span style="font-size:13px;color:var(--color-text-secondary)">嵌入深度:</span>
                     <select id="depthX" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                        <option value="1">1位</option>
-                        <option value="2" selected>2位</option>
+                        <option value="8" selected>8位 完整嵌入</option>
                         <option value="4">4位</option>
+                        <option value="2">2位</option>
+                        <option value="1">1位</option>
                     </select>
                     <button class="btn btn-primary" id="goExtract" style="margin-left:auto">🔍 提取</button>
                 </div>
@@ -117,6 +119,7 @@ export function init(container) {
     });
 
     // LSB 隐写: 把 secret 缩放到载体尺寸, 嵌入低位
+    // 8位=全量嵌入: 载体先灰度化, 秘密图RGB原样写入(无损还原); 低位嵌入保留载体观感
     container.querySelector('#goHide').addEventListener('click', () => {
         if (!carrierImg || !secretImg) { alert('请先选择载体图和秘密图'); return; }
         const depth = +container.querySelector('#depth').value;
@@ -129,12 +132,20 @@ export function init(container) {
         const cd = cData.data, sd = sData.data;
         const mask = (1 << depth) - 1;
 
-        for (let i = 0; i < cd.length; i += 4) {
-            for (let ch = 0; ch < 3; ch++) {
-                const secretHi = (sd[i + ch] >> (8 - depth)) & mask; // 秘密图高位
-                cd[i + ch] = (cd[i + ch] & ~mask) | secretHi;       // 载入载体低位
+        if (depth >= 8) {
+            // 无损模式: 载体灰度化, 秘密RGB全量覆盖
+            for (let i = 0; i < cd.length; i += 4) {
+                const g = (cd[i] + cd[i+1] + cd[i+2]) / 3 | 0;
+                cd[i] = g; cd[i+1] = g; cd[i+2] = g; // 载体变灰
+                cd[i] = sd[i]; cd[i+1] = sd[i+1]; cd[i+2] = sd[i+2]; // 秘密覆盖
             }
-            cd[i + 3] = 255;
+        } else {
+            for (let i = 0; i < cd.length; i += 4) {
+                for (let ch = 0; ch < 3; ch++) {
+                    const secretHi = (sd[i + ch] >> (8 - depth)) & mask; // 秘密图高位
+                    cd[i + ch] = (cd[i + ch] & ~mask) | secretHi;       // 载入载体低位
+                }
+            }
         }
         cctx.putImageData(cData, 0, 0);
 
@@ -161,12 +172,18 @@ export function init(container) {
         const d = imgData.data;
         const mask = (1 << depth) - 1;
 
-        for (let i = 0; i < d.length; i += 4) {
-            for (let ch = 0; ch < 3; ch++) {
-                const low = d[i + ch] & mask;               // 提取低位
-                d[i + ch] = (low << (8 - depth)) | (low << (8 - depth * 2)); // 放大到全范围
+        if (depth >= 8) {
+            // 无损提取: 直接读出秘密RGB
+            for (let i = 0; i < d.length; i += 4) {
+                d[i] = d[i] & 255; d[i+1] = d[i+1] & 255; d[i+2] = d[i+2] & 255;
             }
-            d[i + 3] = 255;
+        } else {
+            for (let i = 0; i < d.length; i += 4) {
+                for (let ch = 0; ch < 3; ch++) {
+                    const low = d[i + ch] & mask;               // 提取低位
+                    d[i + ch] = (low << (8 - depth)) | (low << (8 - depth * 2)); // 放大到全范围
+                }
+            }
         }
         ctx.putImageData(imgData, 0, 0);
 
