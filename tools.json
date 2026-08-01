@@ -359,6 +359,14 @@
       "description": "像素风模块化飞船建造与战斗",
       "category": "趣味游戏",
       "enabled": true
+    },
+    {
+      "id": "element-lab",
+      "name": "元素沙盒",
+      "icon": "🧪",
+      "description": "像素物理沙盒实验室：沙子/水/岩浆/蒸汽/酸/火药/种子/黑洞实时交互演算",
+      "category": "趣味游戏",
+      "enabled": true
     }
   ]
 }
