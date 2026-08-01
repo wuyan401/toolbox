@@ -603,10 +603,12 @@ export function init(container) {
             while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
             e.ang += Math.max(-2.2 * dt, Math.min(2.2 * dt, diff * 3));
-            if (Math.abs(diff) < .6 && e.thrust > 0 && dist > 120) {
+            // 保持距离: 停在模块接触边缘 (半径和 + 小缓冲, 不隔空挡路)
+            const keepDist = shipRadius(e) + shipRadius(p) + 6;
+            if (Math.abs(diff) < .6 && e.thrust > 0 && dist > keepDist) {
                 e.vx += Math.sin(e.ang) * e.thrust * 60 * dt / e.mass;
                 e.vy -= Math.cos(e.ang) * e.thrust * 60 * dt / e.mass;
-            } else if (dist < 100) {
+            } else if (dist < keepDist - 10) {
                 // 保持距离 (撤退)
                 e.vx -= Math.sin(e.ang) * e.thrust * 40 * dt / e.mass;
                 e.vy += Math.cos(e.ang) * e.thrust * 40 * dt / e.mass;
@@ -652,14 +654,14 @@ export function init(container) {
                     if (hit) break;
                 }
                 if (hit) {
-                    // 沿中心连线分离 (按模块包围半径) + 速度交换
+                    // 稳定分离: 沿船中心连线推开 (方向稳定, 避免多模块交替触发方向乱)
                     const dxc = b.x - a.x, dyc = b.y - a.y;
                     const d = Math.hypot(dxc, dyc) || 1;
-                    const minD = shipRadius(a) + shipRadius(b);
-                    const push = d < minD ? (minD - d) / 2 : CELL * .5;
                     const nx = dxc / d, ny = dyc / d;
+                    const push = CELL * .8;
                     a.x -= nx * push; a.y -= ny * push;
                     b.x += nx * push; b.y += ny * push;
+                    // 速度交换 (弹性)
                     const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
                     if (rel > 0) {
                         const ma = a.mass, mb = b.mass;
