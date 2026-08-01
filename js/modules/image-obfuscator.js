@@ -24,7 +24,6 @@ export function init(container) {
                     <option value="1">1轮</option>
                     <option value="2" selected>2轮</option>
                     <option value="4">4轮</option>
-                    <option value="8">8轮</option>
                 </select>
             </div>
             <div style="padding:16px;border:2px dashed var(--color-border);border-radius:12px;text-align:center;cursor:pointer" id="drop">
@@ -178,30 +177,64 @@ export function init(container) {
         };
     }
 
+    // 整数90°旋转(精确无损失)
+    function rotCW(p) { return [p[1], N - 1 - p[0]]; }   // 顺时针90°
+    function rotCCW(p) { return [N - 1 - p[1], p[0]]; }  // 逆时针90°
+    function rot180(p) { return [N - 1 - p[0], N - 1 - p[1]]; }
+
     function exec() {
         if (!img) return;
         const curve = getCurve(algo.value);
         const r = +rounds.value;
         const T = makeTransform(curve);
+        const isObf = mode.value === 'obf';
 
-        outCv.width = N; outCv.height = N;
+        if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
-        ctx.drawImage(img, 0, 0, N, N);
+        // 混淆从原图开始; 解混淆作用于当前画布内容(混淆后的图)
+        if (isObf) ctx.drawImage(img, 0, 0, N, N);
         const imgData = ctx.getImageData(0, 0, N, N);
         const d = imgData.data;
 
-        // 应用自逆变换 r 轮 (混淆/解混淆都同样调用, 轮数相同即可还原)
+        // 每轮: 曲线序号翻转 T + 递增90°旋转 → 置换 perm
+        // T自逆且T²=I, 纯T多轮会塌缩; 叠加旋转后每轮置换不同
+        const perms = [];
         for (let round = 0; round < r; round++) {
-            const nd = new Uint8ClampedArray(d);
+            const ang = ((round + 1) * 90) % 360;
+            const perm = new Int32Array(N * N);
             for (let y = 0; y < N; y++) {
                 for (let x = 0; x < N; x++) {
-                    const [nx, ny] = T(x, y);
-                    const srcI = (y * N + x) * 4;
-                    const dstI = (ny * N + nx) * 4;
-                    nd[dstI] = d[srcI]; nd[dstI+1] = d[srcI+1]; nd[dstI+2] = d[srcI+2]; nd[dstI+3] = 255;
+                    let [nx, ny] = T(x, y);
+                    if (ang === 90) { const t = nx; nx = ny; ny = N - 1 - t; }
+                    else if (ang === 180) { nx = N - 1 - nx; ny = N - 1 - ny; }
+                    else if (ang === 270) { const t = nx; nx = N - 1 - ny; ny = t; }
+                    perm[y * N + x] = ny * N + nx;
                 }
             }
-            d.set(nd);
+            perms.push(perm);
+        }
+
+        if (isObf) {
+            // 混淆: 逐轮 nd[perm[p]] = d[p]
+            for (const perm of perms) {
+                const nd = new Uint8ClampedArray(d);
+                for (let p = 0; p < N * N; p++) {
+                    const dst = perm[p] * 4, src = p * 4;
+                    nd[dst] = d[src]; nd[dst+1] = d[src+1]; nd[dst+2] = d[src+2]; nd[dst+3] = 255;
+                }
+                d.set(nd);
+            }
+        } else {
+            // 解混淆: 逆序 + 逆置换 (严格互逆)
+            for (let i = perms.length - 1; i >= 0; i--) {
+                const perm = perms[i];
+                const nd = new Uint8ClampedArray(d);
+                for (let p = 0; p < N * N; p++) {
+                    const src = perm[p] * 4, dst = p * 4;
+                    nd[dst] = d[src]; nd[dst+1] = d[src+1]; nd[dst+2] = d[src+2]; nd[dst+3] = 255;
+                }
+                d.set(nd);
+            }
         }
         ctx.putImageData(imgData, 0, 0);
         labelL.textContent = mode.value === 'obf' ? '原图' : '混淆图';
