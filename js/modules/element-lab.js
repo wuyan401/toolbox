@@ -142,6 +142,7 @@ export function init(container) {
                     else if (curElem === E.PLANT) life[i] = 600;
                     else if (curElem === E.WOOD) life[i] = 140;
                     else if (curElem === E.SEED) life[i] = 80;
+                    else if (curElem === E.ICE) life[i] = 150; // 融化进度 (缓慢融化)
                     else life[i] = 0;
                 }
             }
@@ -224,7 +225,11 @@ export function init(container) {
 
                 if (id === E.STEAM) {
                     life[i]--;
-                    if (life[i] <= 0) { grid[i] = E.WATER; continue; } // 冷凝
+                    if (life[i] <= 0) {
+                        // 大部分消散, 小部分冷凝 (防止水循环无限增多)
+                        grid[i] = Math.random() < .3 ? E.WATER : E.EMPTY;
+                        continue;
+                    }
                     // 遇冰/水加速冷凝
                     for (let dy = -1; dy <= 1; dy++) {
                         for (let dx = -1; dx <= 1; dx++) {
@@ -417,8 +422,8 @@ export function init(container) {
                                 }
                             }
                         }
-                        // 熔融: 石头/玻璃慢慢熔穿成岩浆; 沙子熔成玻璃
-                        if (Math.random() < .02) {
+                        // 熔融: 石头/玻璃慢慢熔穿成岩浆; 沙子熔成玻璃 (慢速)
+                        if (Math.random() < .008) {
                             for (let dy = -1; dy <= 1; dy++) {
                                 for (let dx = -1; dx <= 1; dx++) {
                                     const nx = x + dx, ny2 = y + dy;
@@ -497,9 +502,9 @@ export function init(container) {
                                 }
                             }
                         }
-                        if (targets.length && Math.random() < .25) {
+                        if (targets.length && Math.random() < .12) {
                             grid[targets[Math.random() * targets.length | 0]] = E.EMPTY;
-                            if (Math.random() < .3) grid[i] = E.EMPTY; // 酸也会消耗
+                            if (Math.random() < .2) grid[i] = E.EMPTY; // 酸也会消耗
                         }
                     }
                     continue;
@@ -549,7 +554,7 @@ export function init(container) {
                                 const nx = x + dx, ny2 = y + dy;
                                 if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
                                 if (grid[ny2 * W + nx] === E.WATER) {
-                                    if (Math.random() < .08) {
+                                    if (Math.random() < .04) {
                                         grid[i] = E.PLANT;
                                         life[i] = 600; // 植物生长能量
                                         // 向上生长一截
@@ -570,7 +575,7 @@ export function init(container) {
                     continue;
                 }
 
-                // 冰: 遇热/遇水融化 (火/岩浆/水都融化, 岩浆+冰=蒸汽+石头链式) + 下落
+                // 冰: 静止固体 (不下落不滑动), 遇热/遇水缓慢融化 (融化进度)
                 if (id === E.ICE) {
                     let melt = false;
                     for (let dy = -1; dy <= 1; dy++) {
@@ -583,23 +588,13 @@ export function init(container) {
                         if (melt) break;
                     }
                     if (melt) {
-                        grid[i] = E.WATER;
-                        life[i] = 0;
-                        continue;
+                        life[i]--;
+                        if (life[i] <= 0) {
+                            grid[i] = E.WATER;
+                            life[i] = 0;
+                        }
                     }
-                    if (inB) {
-                        const below = grid[ny * W + x];
-                        if (below === E.EMPTY) { swap(i, ny * W + x); continue; }
-                        if (isLiquid(below) || isGas(below)) { swap(i, ny * W + x); continue; }
-                    }
-                    const dir = Math.random() < .5 ? 1 : -1;
-                    for (const d of [dir, -dir]) {
-                        const nx = x + d;
-                        if (nx < 0 || nx >= W) continue;
-                        if (!inB) continue;
-                        if (grid[ny * W + nx] === E.EMPTY) { swap(i, ny * W + nx); break; }
-                    }
-                    continue;
+                    continue; // 冰不移动
                 }
             }
         }
