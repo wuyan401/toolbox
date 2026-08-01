@@ -505,8 +505,8 @@ export function init(container) {
                     continue;
                 }
 
-                // 固体 (沙子/火药/种子/冰/灰烬)
-                if (id === E.SAND || id === E.GUNPOWDER || id === E.SEED || id === E.ICE || id === E.ASH) {
+                // 固体 (沙子/火药/种子/灰烬)
+                if (id === E.SAND || id === E.GUNPOWDER || id === E.SEED || id === E.ASH) {
                     if (inB) {
                         const below = grid[ny * W + x];
                         if (below === E.EMPTY) { swap(i, ny * W + x); continue; }
@@ -569,19 +569,37 @@ export function init(container) {
                     }
                     continue;
                 }
-                // 冰遇热融化
+
+                // 冰: 遇热/遇水融化 (火/岩浆/水都融化, 岩浆+冰=蒸汽+石头链式) + 下落
                 if (id === E.ICE) {
+                    let melt = false;
                     for (let dy = -1; dy <= 1; dy++) {
                         for (let dx = -1; dx <= 1; dx++) {
                             const nx = x + dx, ny2 = y + dy;
                             if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
                             const nid = grid[ny2 * W + nx];
-                            if (nid === E.FIRE || nid === E.LAVA) {
-                                grid[i] = E.WATER;
-                                break;
-                            }
+                            if (nid === E.FIRE || nid === E.LAVA || nid === E.WATER) { melt = true; break; }
                         }
+                        if (melt) break;
                     }
+                    if (melt) {
+                        grid[i] = E.WATER;
+                        life[i] = 0;
+                        continue;
+                    }
+                    if (inB) {
+                        const below = grid[ny * W + x];
+                        if (below === E.EMPTY) { swap(i, ny * W + x); continue; }
+                        if (isLiquid(below) || isGas(below)) { swap(i, ny * W + x); continue; }
+                    }
+                    const dir = Math.random() < .5 ? 1 : -1;
+                    for (const d of [dir, -dir]) {
+                        const nx = x + d;
+                        if (nx < 0 || nx >= W) continue;
+                        if (!inB) continue;
+                        if (grid[ny * W + nx] === E.EMPTY) { swap(i, ny * W + nx); break; }
+                    }
+                    continue;
                 }
             }
         }
