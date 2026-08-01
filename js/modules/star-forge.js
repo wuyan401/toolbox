@@ -45,12 +45,13 @@ export function init(container) {
           <div style="font-size:11px;font-weight:700;color:#80d8ff;letter-spacing:3px">▚ 模块库</div>
           <div id="sf-modules" style="display:grid;grid-template-columns:1fr 1fr;gap:4px"></div>
           <div id="sf-info" style="font-size:11px;color:#9ad1ff;background:rgba(0,20,60,.5);border:1px solid rgba(64,196,255,.2);border-radius:8px;padding:6px;line-height:1.6"></div>
+          <div id="sf-dir" style="font-size:11px;color:#ffd54a;background:rgba(255,213,74,.08);border:1px solid rgba(255,213,74,.3);border-radius:8px;padding:5px 8px;text-align:center">🔄 方向: ↑ <span style="color:#5c7fa3">(R键旋转)</span></div>
           <div style="font-size:10px;color:#5c7fa3;line-height:1.7">
             🖱️ 左键放置 / 右键删除<br>
-            🖲️ 滚轮缩放画面<br>
+            🖲️ 滚轮缩放画面 · R旋转方向<br>
             ⚔️ 战斗中: WASD移动<br>
             鼠标=舰首瞄准<br>
-            🎮 切手动: 按键开火<br>
+            🎮 切手动: 按键齐射(朝炮塔方向)<br>
             ⌨️ 键位可自定义
           </div>
         </div>
@@ -73,6 +74,8 @@ export function init(container) {
     const modeLabel = container.querySelector('#sf-mode');
     const infoBox = container.querySelector('#sf-info');
     const zoomLabel = container.querySelector('#sf-zoom');
+    const dirLabel = container.querySelector('#sf-dir');
+    const DIR_ARROWS = ['↑', '→', '↓', '←'];
 
     // ===== 状态 =====
     let mode = 'build';
@@ -265,9 +268,13 @@ export function init(container) {
         drawBuild();
     }, { passive: false });
 
+    // 模块放置方向: 0=上(船首) 1=右 2=下 3=左
+    let placeDir = 0;
+    const DIR_VEC = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
     function place(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= GRID || gy >= GRID) return;
-        grid[gy][gx] = selected;
+        grid[gy][gx] = { k: selected, d: placeDir };
     }
     function remove(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= GRID || gy >= GRID) return;
@@ -275,6 +282,27 @@ export function init(container) {
     }
 
     // ===== 建造渲染 (科幻霓虹) =====
+    // 绘制带方向的模块纹理
+    function drawMod(ctx, cell, gx, gy, size) {
+        const M = MODULES[cell.k];
+        ctx.save();
+        ctx.translate(gx * size + size / 2, gy * size + size / 2);
+        ctx.rotate(cell.d * Math.PI / 2);
+        ctx.drawImage(textures[cell.k], -size / 2, -size / 2, size, size);
+        ctx.restore();
+        // 方向指示 (武器/推进器): 前端小三角
+        if (cell.k === 'laser' || cell.k === 'cannon' || cell.k === 'missile' || cell.k === 'thruster') {
+            const v = DIR_VEC[cell.d];
+            ctx.fillStyle = 'rgba(255,255,255,.75)';
+            ctx.beginPath();
+            ctx.moveTo(gx * size + size / 2 + v[0] * size * .38, gy * size + size / 2 + v[1] * size * .38);
+            ctx.lineTo(gx * size + size / 2 + v[0] * size * .38 - v[1] * 3.5, gy * size + size / 2 + v[1] * size * .38 + v[0] * 3.5);
+            ctx.lineTo(gx * size + size / 2 + v[0] * size * .38 + v[1] * 3.5, gy * size + size / 2 + v[1] * size * .38 - v[0] * 3.5);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
     function drawBuild() {
         bctx.clearRect(0, 0, 512, 512);
         // 深空底
@@ -309,14 +337,15 @@ export function init(container) {
         bctx.stroke();
         bctx.strokeStyle = 'rgba(105,240,174,.12)';
         bctx.beginPath(); bctx.arc(256, 256, 48, 0, Math.PI * 2); bctx.stroke();
-        // 模块 (发光边框)
+        // 模块 (发光边框 + 方向)
         for (let y = 0; y < GRID; y++) {
             for (let x = 0; x < GRID; x++) {
                 if (grid[y][x]) {
-                    const M = MODULES[grid[y][x]];
+                    const M = MODULES[grid[y][x].k];
+                    if (!M) continue;
                     bctx.shadowColor = M.glow;
                     bctx.shadowBlur = 6;
-                    bctx.drawImage(textures[grid[y][x]], x * CELL, y * CELL, CELL, CELL);
+                    drawMod(bctx, grid[y][x], x, y, CELL);
                     bctx.shadowBlur = 0;
                     bctx.strokeStyle = M.glow + '88';
                     bctx.lineWidth = 1;
@@ -324,7 +353,7 @@ export function init(container) {
                 }
             }
         }
-        // 悬停预览
+        // 悬停预览 (带放置方向)
         if (mouse.x >= 0 && mouse.y >= 0 && mouse.x < GRID && mouse.y < GRID) {
             const px = mouse.x * CELL, py = mouse.y * CELL;
             if (grid[mouse.y][mouse.x]) {
@@ -336,7 +365,7 @@ export function init(container) {
                 bctx.globalAlpha = .55;
                 bctx.shadowColor = M.glow;
                 bctx.shadowBlur = 8;
-                bctx.drawImage(textures[selected], px, py, CELL, CELL);
+                drawMod(bctx, { k: selected, d: placeDir }, mouse.x, mouse.y, CELL);
                 bctx.shadowBlur = 0;
                 bctx.globalAlpha = 1;
                 bctx.strokeStyle = 'rgba(255,255,255,.7)';
@@ -363,6 +392,13 @@ export function init(container) {
             if (!data) { flash('⚠️ 没有已保存的设计'); return; }
             const g = JSON.parse(data);
             if (!Array.isArray(g) || g.length !== GRID) throw new Error('数据损坏');
+            // 兼容旧格式 (字符串 key → {k,d})
+            for (let y = 0; y < GRID; y++) {
+                for (let x = 0; x < GRID; x++) {
+                    const c = g[y][x];
+                    if (typeof c === 'string') g[y][x] = c === '.' ? null : { k: c, d: 0 };
+                }
+            }
             grid = g;
             drawBuild();
             flash('📂 设计已加载');
@@ -389,7 +425,7 @@ export function init(container) {
         set(c - 1, c + 3, 'thruster'); set(c + 1, c + 3, 'thruster');
         drawBuild();
     };
-    function set(x, y, v) { if (x >= 0 && y >= 0 && x < GRID && y < GRID) grid[y][x] = v; }
+    function set(x, y, v) { if (x >= 0 && y >= 0 && x < GRID && y < GRID) grid[y][x] = { k: v, d: 0 }; }
     let flashTimer = 0;
     function flash(msg) {
         modeLabel.textContent = msg;
@@ -402,10 +438,11 @@ export function init(container) {
         const mods = [];
         for (let y = 0; y < GRID; y++) {
             for (let x = 0; x < GRID; x++) {
-                if (g[y][x]) {
-                    const M = MODULES[g[y][x]];
+                const cell = g[y][x];
+                if (cell && cell.k) {
+                    const M = MODULES[cell.k];
                     if (!M) continue;
-                    mods.push({ key: g[y][x], x, y, hp: M.hp, maxHp: M.hp, wx: (x - GRID / 2) * CELL, wy: (y - GRID / 2) * CELL });
+                    mods.push({ key: cell.k, d: cell.d || 0, x, y, hp: M.hp, maxHp: M.hp, wx: (x - GRID / 2) * CELL, wy: (y - GRID / 2) * CELL });
                 }
             }
         }
@@ -442,7 +479,7 @@ export function init(container) {
         for (let y = 0; y < rows.length; y++) {
             for (let x = 0; x < rows[y].length; x++) {
                 const ch = rows[y][x];
-                if (ch !== '.') g[y + offY][x + offX] = TPL_CODE[ch] || ch;
+                if (ch !== '.') g[y + offY][x + offX] = { k: TPL_CODE[ch] || ch, d: 0 };
             }
         }
         return g;
@@ -450,7 +487,7 @@ export function init(container) {
 
     function startBattle() {
         let hasCore = false;
-        for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) if (grid[y][x] === 'core') hasCore = true;
+        for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) if (grid[y][x] && grid[y][x].k === 'core') hasCore = true;
         if (!hasCore) { flash('⚠️ 请先放置核心模块!'); return; }
 
         battle = {
@@ -495,7 +532,13 @@ export function init(container) {
 
     // ===== 战斗更新 =====
     function shipRadius(s) {
-        return Math.max(18, s.mods.length * 3 + 8);
+        // 模块实际包围半径 (护盾视觉半径 + 碰撞分离基准)
+        let r = 0;
+        for (const m of s.mods) {
+            if (m.hp <= 0) continue;
+            r = Math.max(r, Math.hypot(m.wx, m.wy) + CELL * .5);
+        }
+        return Math.max(10, r);
     }
 
     function updateBattle(dt) {
@@ -584,26 +627,45 @@ export function init(container) {
             fireWeapons(e, dt, p);
         }
 
-        // ===== 飞船碰撞 (圆碰撞 + 分离) =====
+        // ===== 飞船碰撞 (模块级AABB: 只有模块有碰撞体, 护盾无碰撞) =====
         const allShips = [p, ...B.enemies.filter(x => !x.dead)];
         for (let i = 0; i < allShips.length; i++) {
             for (let j = i + 1; j < allShips.length; j++) {
                 const a = allShips[i], b = allShips[j];
-                const dxc = b.x - a.x, dyc = b.y - a.y;
-                const d = Math.hypot(dxc, dyc);
-                const minD = shipRadius(a) + shipRadius(b);
-                if (d < minD && d > 0.01) {
-                    const push = (minD - d) / 2;
+                // 计算存活模块的世界坐标
+                const ams = [];
+                for (const m of a.mods) {
+                    if (m.hp <= 0) continue;
+                    ams.push({ x: a.x + m.wx * Math.cos(a.ang) - m.wy * Math.sin(a.ang), y: a.y + m.wx * Math.sin(a.ang) + m.wy * Math.cos(a.ang) });
+                }
+                const bms = [];
+                for (const m of b.mods) {
+                    if (m.hp <= 0) continue;
+                    bms.push({ x: b.x + m.wx * Math.cos(b.ang) - m.wy * Math.sin(b.ang), y: b.y + m.wx * Math.sin(b.ang) + m.wy * Math.cos(b.ang) });
+                }
+                // AABB 相交检测
+                let hit = false;
+                for (const ma of ams) {
+                    for (const mb of bms) {
+                        if (Math.abs(ma.x - mb.x) < CELL * .92 && Math.abs(ma.y - mb.y) < CELL * .92) { hit = true; break; }
+                    }
+                    if (hit) break;
+                }
+                if (hit) {
+                    // 沿中心连线分离 (按模块包围半径) + 速度交换
+                    const dxc = b.x - a.x, dyc = b.y - a.y;
+                    const d = Math.hypot(dxc, dyc) || 1;
+                    const minD = shipRadius(a) + shipRadius(b);
+                    const push = d < minD ? (minD - d) / 2 : CELL * .5;
                     const nx = dxc / d, ny = dyc / d;
                     a.x -= nx * push; a.y -= ny * push;
                     b.x += nx * push; b.y += ny * push;
-                    // 速度交换 (弹性碰撞, 简化)
                     const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
                     if (rel > 0) {
                         const ma = a.mass, mb = b.mass;
                         const imp = rel * Math.min(1, 2 * mb / (ma + mb));
-                        a.vx -= nx * imp * .8; a.vy -= ny * imp * .8;
-                        b.vx += nx * imp * .8; b.vy += ny * imp * .8;
+                        a.vx -= nx * imp * .7; a.vy -= ny * imp * .7;
+                        b.vx += nx * imp * .7; b.vy += ny * imp * .7;
                     }
                 }
             }
@@ -647,9 +709,9 @@ export function init(container) {
                         break;
                     } else { b.hitDist = b.range; }
                 } else {
-                    const hr = shipRadius(t);
-                    if (Math.hypot(b.x - t.x, b.y - t.y) < hr + 4) {
-                        const mod = modAtWorld(t, b.x, b.y);
+                    // 子弹命中: 只检测模块 (护盾无碰撞体积, 只吸收伤害)
+                    const mod = modAtWorld(t, b.x, b.y);
+                    if (mod) {
                         damageShip(t, mod, b.dmg, b.x, b.y);
                         boom(b.x, b.y, 10, MODULES[b.source].color);
                         hit = true;
@@ -765,10 +827,14 @@ export function init(container) {
         if (ship.energy < M.energy * .2) { flash(`⚠️ 能量不足`); return; }
         const mods = ship.mods.filter(m => m.key === key && m.hp > 0);
         if (!mods.length) { flash(`⚠️ 无${M.name}可用`); return; }
-        const ang = ship.ang; // 手动模式发射方向 = 舰首 (鼠标瞄准方向)
         for (const m of mods) {
             const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
             const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
+            // 发射方向 = 模块方向 (玩家通过旋转模块布置炮塔朝向)
+            const lv = DIR_VEC[m.d || 0];
+            const wx2 = lv[0] * Math.cos(ship.ang) - lv[1] * Math.sin(ship.ang);
+            const wy2 = lv[0] * Math.sin(ship.ang) + lv[1] * Math.cos(ship.ang);
+            const ang = Math.atan2(wy2, wx2);
             if (key === 'laser') {
                 B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: 'player', source: key, life: .12, dead: false });
                 muzz(gx, gy, '#ff5252');
@@ -1085,13 +1151,17 @@ export function init(container) {
                 ctx.stroke();
             }
         }
-        // 模块 (发光)
+        // 模块 (发光 + 方向旋转)
         for (const m of ship.mods) {
             if (m.hp <= 0) continue;
             const M = MODULES[m.key];
             ctx.shadowColor = M.glow;
             ctx.shadowBlur = 4;
-            ctx.drawImage(textures[m.key], m.wx, m.wy, CELL, CELL);
+            ctx.save();
+            ctx.translate(m.wx + CELL / 2, m.wy + CELL / 2);
+            ctx.rotate((m.d || 0) * Math.PI / 2);
+            ctx.drawImage(textures[m.key], -CELL / 2, -CELL / 2, CELL, CELL);
+            ctx.restore();
             ctx.shadowBlur = 0;
             if (m.hp < m.maxHp * .4) {
                 ctx.fillStyle = `rgba(255,60,60,${.3 + .2 * Math.sin(battle.time * 8)})`;
@@ -1104,17 +1174,25 @@ export function init(container) {
             for (const m of ship.mods) if (m.hp > 0) ctx.fillRect(m.wx, m.wy, CELL, CELL);
             ship.flash -= 1 / 60;
         }
-        // 推进器火焰 (脉冲)
+        // 推进器火焰 (按模块方向喷出)
         for (const m of ship.mods) {
             if (m.key !== 'thruster' || m.hp <= 0) continue;
+            const v = DIR_VEC[m.d || 0];
             const flick = 5 + Math.sin(battle.time * 18 + m.x) * 3 + Math.random() * 3;
+            // 火焰在模块后方 (-v 方向)
+            const bx = m.wx + CELL / 2 - v[0] * (CELL * .3 + flick * .5);
+            const by = m.wy + CELL / 2 - v[1] * (CELL * .3 + flick * .5);
             ctx.shadowColor = '#ff9100';
             ctx.shadowBlur = 8;
             ctx.fillStyle = 'rgba(255,120,40,.9)';
-            ctx.fillRect(m.wx + 2, m.wy + CELL / 2 - 2.5, flick, 5);
+            ctx.save();
+            ctx.translate(bx, by);
+            ctx.rotate(Math.atan2(v[1], v[0]));
+            ctx.fillRect(0, -2.5, flick, 5);
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#ffeb3b';
-            ctx.fillRect(m.wx + 2, m.wy + CELL / 2 - 1, flick * .5, 2);
+            ctx.fillRect(0, -1, flick * .5, 2);
+            ctx.restore();
         }
         ctx.restore();
     }
@@ -1138,6 +1216,12 @@ export function init(container) {
                     if (bindings[wk] === k && battle.player) manualFire(battle.player, wk);
                 }
             }
+        }
+        // 建造模式: R 键旋转放置方向
+        if (down && mode === 'build' && k === 'r') {
+            placeDir = (placeDir + 1) % 4;
+            dirLabel.innerHTML = `🔄 方向: ${DIR_ARROWS[placeDir]} <span style="color:#5c7fa3">(R键旋转)</span>`;
+            drawBuild();
         }
     }
     window.addEventListener('keydown', e => onKey(e, true));
