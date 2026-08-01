@@ -333,6 +333,24 @@
             "category": "生成美化",
             "module": "js/modules/barcode-maker.js",
             "enabled": true
+        },
+        {
+            "id": "prism-tank",
+            "name": "光棱坦克工厂",
+            "icon": "🔮",
+            "description": "棱镜光束图片特效，红警光棱坦克风格色散分解",
+            "category": "生成美化",
+            "module": "js/modules/prism-tank.js",
+            "enabled": true
+        },
+        {
+            "id": "image-obfuscator",
+            "name": "图片混淆器",
+            "icon": "🎭",
+            "description": "马赛克/像素/噪点/模糊/打乱/条纹混淆打码",
+            "category": "生成美化",
+            "module": "js/modules/image-obfuscator.js",
+            "enabled": true
         }
     ]
 }
