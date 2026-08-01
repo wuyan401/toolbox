@@ -145,7 +145,6 @@ async function loadTools() {
                     name: module.name,
                     icon: module.icon,
                     description: module.description,
-                    category: module.category,
                     init: module.init
                 });
                 return tool;
