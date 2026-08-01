@@ -10,9 +10,10 @@ export function init(container) {
         <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
             <div style="display:flex;gap:8px;align-items:center">
                 <select id="mode" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                    <option value="obf">🎭 混淆 (原图→乱图)</option>
-                    <option value="deobf">🔄 解混淆 (乱图→原图)</option>
+                    <option value="obf" selected>🔒 混淆</option>
+                    <option value="deobf">🔓 解混淆</option>
                 </select>
+                <div style="font-size:11px;color:var(--color-text-tertiary)" id="obfTip">解混淆: 请上传混淆后保存的图片, 自动使用混淆时的算法和轮数</div>
                 <span style="font-size:13px;color:var(--color-text-secondary)">算法:</span>
                 <select id="algo" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
                     <option value="puzzle" selected>🧩 拼图块打乱 (保留细节, 明显混淆)</option>
@@ -76,10 +77,12 @@ export function init(container) {
             const i = new Image();
             i.onload = () => {
                 img = i;
+                // 上传的图总是先画到画布, 混淆/解混淆都基于它
+                if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
+                outCv.getContext('2d').drawImage(i, 0, 0, N, N);
                 srcCv.width = N; srcCv.height = N;
                 const ctx = srcCv.getContext('2d');
-                const scale = Math.max(N / i.width, N / i.height);
-                ctx.drawImage(i, (N - i.width * scale) / 2, (N - i.height * scale) / 2, i.width * scale, i.height * scale);
+                ctx.drawImage(i, 0, 0, N, N);
                 exec();
             };
             i.src = reader.result;
@@ -209,6 +212,7 @@ export function init(container) {
     }
 
     let lastObfParams = null; // 记录混淆时的算法+轮数, 解混淆自动复用
+    try { lastObfParams = JSON.parse(localStorage.getItem('obf-last-params') || 'null'); } catch (e) { lastObfParams = null; }
 
     // 曲线位移变换: 沿曲线序号平移像素 (真混淆, 保留局部相关性, 可逆)
     // 注意: 曲线"序号翻转"对Hilbert恰为180°旋转(中心对称), 必须用位移而非翻转!
@@ -257,15 +261,18 @@ export function init(container) {
     function exec() {
         if (!img) return;
         let r = +rounds.value;
+        let algoUsed = algo.value;
         const isObf = mode.value === 'obf';
         if (isObf) {
             lastObfParams = { algo: algo.value, rounds: r };
+            try { localStorage.setItem('obf-last-params', JSON.stringify(lastObfParams)); } catch (e) {}
         } else if (lastObfParams) {
-            // 解混淆必须使用与混淆时相同的参数, 否则无法还原
+            // 解混淆必须使用与混淆时相同的算法+轮数, 否则无法还原
+            algoUsed = lastObfParams.algo;
             r = lastObfParams.rounds;
         }
-        const usePuzzle = algo.value === 'puzzle';
-        const useRandom = algo.value === 'random';
+        const usePuzzle = algoUsed === 'puzzle';
+        const useRandom = algoUsed === 'random';
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
@@ -340,9 +347,11 @@ export function init(container) {
     });
     container.querySelector('#go').addEventListener('click', exec);
     container.querySelector('#dl').addEventListener('click', () => {
+        // 下载前按当前参数重新执行, 保证下载的图与参数记忆一致 (防"试参数后下载错图")
+        if (mode.value === 'obf') exec();
         const a = document.createElement('a');
         a.href = outCv.toDataURL('image/png');
-        a.download = mode.value === 'obf' ? 'obfuscated.png' : 'restored.png';
+        a.download = '混淆结果.png';
         a.click();
     });
 
