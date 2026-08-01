@@ -227,7 +227,7 @@ export function init(container) {
                     life[i]--;
                     if (life[i] <= 0) {
                         // 大部分消散, 小部分冷凝 (防止水循环无限增多)
-                        grid[i] = Math.random() < .3 ? E.WATER : E.EMPTY;
+                        grid[i] = Math.random() < .2 ? E.WATER : E.EMPTY;
                         continue;
                     }
                     // 遇冰/水加速冷凝
@@ -406,6 +406,24 @@ export function init(container) {
                             }
                         }
                     }
+                    // 岩浆遇水反应: 概率性相互消除 (不瞬间生成石头墙)
+                    // 岩浆→石头(20%)或蒸发(80%), 水→蒸汽(80%消散) → 双方持续消耗
+                    if (id === E.LAVA && Math.random() < .45) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const nx = x + dx, ny2 = y + dy;
+                                if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                                const ni = ny2 * W + nx;
+                                if (grid[ni] === E.WATER) {
+                                    grid[i] = Math.random() < .2 ? E.STONE : E.EMPTY;
+                                    life[i] = 0;
+                                    grid[ni] = E.STEAM;
+                                    life[ni] = 40;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     // 岩浆: 点燃可燃物 + 熔融固体
                     if (id === E.LAVA) {
                         for (let dy = -1; dy <= 1; dy++) {
@@ -470,22 +488,6 @@ export function init(container) {
                                 swap(i, y * W + nx);
                             }
                             break;
-                        }
-                    }
-                    // 岩浆反应: 遇水变石头
-                    if (id === E.LAVA) {
-                        for (let dy = -1; dy <= 1; dy++) {
-                            for (let dx = -1; dx <= 1; dx++) {
-                                const nx = x + dx, ny2 = y + dy;
-                                if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
-                                const ni = ny2 * W + nx;
-                                if (grid[ni] === E.WATER) {
-                                    grid[i] = E.STONE;
-                                    grid[ni] = E.STEAM;
-                                    life[ni] = 40;
-                                    break;
-                                }
-                            }
                         }
                     }
                     // 酸: 腐蚀相邻固体
@@ -570,6 +572,18 @@ export function init(container) {
                                     break;
                                 }
                             }
+                        }
+                    }
+                    continue;
+                }
+
+                // 石头/玻璃: 静止固体, 但在液体中会下沉 (反应产物不堵接触面)
+                if (id === E.STONE || id === E.GLASS) {
+                    if (inB) {
+                        const below = grid[ny * W + x];
+                        if (isLiquid(below)) {
+                            swap(i, ny * W + x);
+                            continue;
                         }
                     }
                     continue;
