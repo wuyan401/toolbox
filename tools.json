@@ -33,7 +33,7 @@
             "name": "JSON 格式化",
             "icon": "📋",
             "description": "JSON 格式化/压缩，语法错误检测",
-            "category": "格式化",
+            "category": "开发工具",
             "module": "js/modules/json-formatter.js",
             "enabled": true
         },
@@ -42,7 +42,7 @@
             "name": "Markdown 预览",
             "icon": "📄",
             "description": "Markdown 实时预览，GitHub 风格渲染",
-            "category": "格式化",
+            "category": "开发工具",
             "module": "js/modules/markdown-preview.js",
             "enabled": true
         },
@@ -51,7 +51,7 @@
             "name": "Base64 编解码",
             "icon": "🔐",
             "description": "Base64 编码与解码转换",
-            "category": "编码转换",
+            "category": "开发工具",
             "module": "js/modules/base64.js",
             "enabled": true
         },
@@ -60,7 +60,7 @@
             "name": "时间戳转换",
             "icon": "🕐",
             "description": "时间戳与日期互转，支持秒/毫秒切换",
-            "category": "编码转换",
+            "category": "开发工具",
             "module": "js/modules/timestamp-converter.js",
             "enabled": true
         },
@@ -69,7 +69,7 @@
             "name": "文本对比",
             "icon": "📝",
             "description": "逐行比较文本差异，高亮显示变更",
-            "category": "日常工具",
+            "category": "文本处理",
             "module": "js/modules/text-diff.js",
             "enabled": true
         },
@@ -87,7 +87,7 @@
             "name": "二维码生成",
             "icon": "📱",
             "description": "在线生成二维码，支持 URL/文本",
-            "category": "生成工具",
+            "category": "生成美化",
             "module": "js/modules/qrcode.js",
             "enabled": true
         },
@@ -96,7 +96,7 @@
             "name": "正则测试",
             "icon": "🔍",
             "description": "正则表达式在线测试，支持标志位和常用正则",
-            "category": "日常工具",
+            "category": "开发工具",
             "module": "js/modules/regex-tester.js",
             "enabled": true
         },
@@ -105,7 +105,7 @@
             "name": "Token 估算器",
             "icon": "🧮",
             "description": "估算文本的 Token 数量，支持多模型费用预估",
-            "category": "AI 工具",
+            "category": "开发工具",
             "module": "js/modules/token-counter.js",
             "enabled": true
         },
@@ -114,7 +114,7 @@
             "name": "Prompt 模板库",
             "icon": "📚",
             "description": "预置常用 Prompt 模板，分类浏览、搜索、一键复制",
-            "category": "AI 工具",
+            "category": "开发工具",
             "module": "js/modules/prompt-templates.js",
             "enabled": true
         },
@@ -159,7 +159,7 @@
             "name": "文本去重排序",
             "icon": "📑",
             "description": "文本去重（保留首次/末次）、排序、去除空行，办公必备",
-            "category": "办公工具",
+            "category": "文本处理",
             "module": "js/modules/text-dedupe.js",
             "enabled": true
         },
@@ -168,7 +168,7 @@
             "name": ".gitignore 生成器",
             "icon": "📝",
             "description": "多选技术栈标签，实时生成合并 .gitignore 文件，支持搜索和下载",
-            "category": "构建工具",
+            "category": "开发工具",
             "module": "js/modules/gitignore-generator.js",
             "enabled": true
         },
@@ -213,7 +213,7 @@
             "name": "字数统计",
             "icon": "📊",
             "description": "实时统计字符/汉字/单词/行/段落/标点数",
-            "category": "办公工具",
+            "category": "文本处理",
             "module": "js/modules/word-counter.js",
             "enabled": true
         },
@@ -222,7 +222,7 @@
             "name": "简繁转换",
             "icon": "🈶",
             "description": "简体↔繁体双向转换，100+常用词汇对照",
-            "category": "办公工具",
+            "category": "文本处理",
             "module": "js/modules/chinese-converter.js",
             "enabled": true
         },
@@ -240,7 +240,7 @@
             "name": "摩斯电码",
             "icon": "📟",
             "description": "文字与摩斯电码互相转换，支持播放音频",
-            "category": "趣味工具",
+            "category": "趣味游戏",
             "module": "js/modules/morse-code.js",
             "enabled": true
         },
@@ -249,7 +249,7 @@
             "name": "贪吃蛇",
             "icon": "🐍",
             "description": "经典贪吃蛇游戏，方向键/触摸滑动控制，加速机制",
-            "category": "趣味工具",
+            "category": "趣味游戏",
             "module": "js/modules/snake-game.js",
             "enabled": true
         },
@@ -258,7 +258,7 @@
             "name": "扫雷",
             "icon": "💣",
             "description": "经典扫雷游戏，支持红旗标记和自动展开",
-            "category": "趣味工具",
+            "category": "趣味游戏",
             "module": "js/modules/minesweeper.js",
             "enabled": true
         },
@@ -267,7 +267,7 @@
             "name": "2048",
             "icon": "🧩",
             "description": "经典2048数字游戏，方向键/触摸滑动，最高分记录",
-            "category": "趣味工具",
+            "category": "趣味游戏",
             "module": "js/modules/game-2048.js",
             "enabled": true
         },
@@ -276,7 +276,7 @@
             "name": "吸血鬼幸存者",
             "icon": "🦇",
             "description": "Canvas肉鸽生存游戏，3职业/7怪物/Boss/掉落/光剑/冲刺/自动寻路",
-            "category": "趣味工具",
+            "category": "趣味游戏",
             "module": "js/modules/vampire-survivors.js",
             "enabled": true
         },
@@ -294,7 +294,7 @@
             "name": "JSON↔CSV",
             "icon": "🔄",
             "description": "JSON与CSV互相转换，支持复杂嵌套",
-            "category": "格式化",
+            "category": "开发工具",
             "module": "js/modules/json-csv.js",
             "enabled": true
         },
@@ -303,7 +303,7 @@
             "name": "文本加密",
             "icon": "🔐",
             "description": "AES-GCM/凯撒密码加密解密",
-            "category": "生成工具",
+            "category": "开发工具",
             "module": "js/modules/text-encrypt.js",
             "enabled": true
         },
@@ -312,7 +312,7 @@
             "name": "渐变生成器",
             "icon": "🎨",
             "description": "CSS渐变背景生成，实时预览一键复制",
-            "category": "生成工具",
+            "category": "生成美化",
             "module": "js/modules/gradient-maker.js",
             "enabled": true
         },
@@ -330,7 +330,7 @@
             "name": "条形码生成",
             "icon": "📊",
             "description": "Code128条形码生成，支持下载PNG",
-            "category": "生成工具",
+            "category": "生成美化",
             "module": "js/modules/barcode-maker.js",
             "enabled": true
         }

@@ -25,12 +25,9 @@ export function initRouter(tools) {
     const CATEGORIES = [
         { id: '日常工具', label: '日常工具', dotClass: 'dot-blue' },
         { id: '开发工具', label: '开发工具', dotClass: 'dot-indigo' },
-        { id: '格式化',   label: '格式化',   dotClass: 'dot-green' },
-        { id: '编码转换', label: '编码转换', dotClass: 'dot-purple' },
-        { id: '办公工具', label: '办公工具', dotClass: 'dot-teal' },
-        { id: '生成工具', label: '生成工具', dotClass: 'dot-cyan' },
-        { id: 'AI 工具',  label: 'AI 工具',  dotClass: 'dot-orange' },
-        { id: '构建工具', label: '构建工具', dotClass: 'dot-red' }
+        { id: '文本处理', label: '文本处理', dotClass: 'dot-green' },
+        { id: '生成美化', label: '生成美化', dotClass: 'dot-purple' },
+        { id: '趣味游戏', label: '趣味游戏', dotClass: 'dot-orange' }
     ];
 
     /**
