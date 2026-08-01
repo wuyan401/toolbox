@@ -15,6 +15,7 @@ export function init(container) {
                 </select>
                 <span style="font-size:13px;color:var(--color-text-secondary)">算法:</span>
                 <select id="algo" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
+                    <option value="random" selected>🌪️ 雪花随机 (完全打乱)</option>
                     <option value="hilbert">🧬 Hilbert曲线</option>
                     <option value="zorder">🔀 Z-order曲线</option>
                     <option value="peano">🌀 Peano曲线</option>
@@ -184,10 +185,33 @@ export function init(container) {
     function rotCCW(p) { return [N - 1 - p[1], p[0]]; }  // 逆时针90°
     function rot180(p) { return [N - 1 - p[0], N - 1 - p[1]]; }
 
+    // 种子随机数 (mulberry32) - 生成可重复的伪随机置换
+    function mulberry32(a) {
+        return function() {
+            a |= 0; a = a + 0x6D2B79F5 | 0;
+            let t = Math.imul(a ^ a >>> 15, 1 | a);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+    }
+
+    // 种子随机置换: 完全打乱像素位置 (雪花效果), 同种子可逆
+    function buildRandomPerm(seed) {
+        const perm = new Int32Array(N * N);
+        for (let i = 0; i < N * N; i++) perm[i] = i;
+        const rng = mulberry32(seed);
+        for (let i = N * N - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+        }
+        return perm;
+    }
+
     function exec() {
         if (!img) return;
         const r = +rounds.value;
         const isObf = mode.value === 'obf';
+        const useRandom = algo.value === 'random';
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
@@ -196,25 +220,30 @@ export function init(container) {
         const imgData = ctx.getImageData(0, 0, N, N);
         const d = imgData.data;
 
-        // 每轮: 曲线序号翻转 T + 递增90°旋转 → 置换 perm
+        // 每轮: 生成置换 perm (随机雪花 或 曲线翻转+递增90°旋转)
         // 多曲线交替(hilbert→zorder→peano)打破单曲线对称巧合, 轮数再多也不塌缩
         const curves = ['hilbert', 'zorder', 'peano'];
         const perms = [];
         for (let round = 0; round < r; round++) {
-            const curve2 = getCurve(curves[round % 3]);
-            const T2 = makeTransform(curve2);
-            const ang = ((round + 1) * 90) % 360;
-            const perm = new Int32Array(N * N);
-            for (let y = 0; y < N; y++) {
-                for (let x = 0; x < N; x++) {
-                    let [nx, ny] = T2(x, y);
-                    if (ang === 90) { const t = nx; nx = ny; ny = N - 1 - t; }
-                    else if (ang === 180) { nx = N - 1 - nx; ny = N - 1 - ny; }
-                    else if (ang === 270) { const t = nx; nx = N - 1 - ny; ny = t; }
-                    perm[y * N + x] = ny * N + nx;
+            if (useRandom) {
+                // 雪花随机: 每轮不同种子
+                perms.push(buildRandomPerm(10007 + round * 7919));
+            } else {
+                const curve2 = getCurve(curves[round % 3]);
+                const T2 = makeTransform(curve2);
+                const ang = ((round + 1) * 90) % 360;
+                const perm = new Int32Array(N * N);
+                for (let y = 0; y < N; y++) {
+                    for (let x = 0; x < N; x++) {
+                        let [nx, ny] = T2(x, y);
+                        if (ang === 90) { const t = nx; nx = ny; ny = N - 1 - t; }
+                        else if (ang === 180) { nx = N - 1 - nx; ny = N - 1 - ny; }
+                        else if (ang === 270) { const t = nx; nx = N - 1 - ny; ny = t; }
+                        perm[y * N + x] = ny * N + nx;
+                    }
                 }
+                perms.push(perm);
             }
-            perms.push(perm);
         }
 
         if (isObf) {
