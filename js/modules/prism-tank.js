@@ -28,15 +28,16 @@ export function init(container) {
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
-                    <span style="font-size:13px;color:var(--color-text-secondary)">嵌入深度:</span>
+                    <span style="font-size:13px;color:var(--color-text-secondary)">嵌入模式:</span>
                     <select id="depth" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                        <option value="8" selected>8位 完整嵌入 (载体变灰, 无损还原)</option>
-                        <option value="4">4位 (载体稍损, 还原清晰)</option>
-                        <option value="2">2位 (载体微损, 还原一般)</option>
-                        <option value="1">1位 (载体无损, 还原模糊)</option>
+                        <option value="4" selected>4位 隐蔽 (载体几乎不变, 秘密清晰)</option>
+                        <option value="2">2位 更隐蔽 (载体无损, 秘密一般)</option>
+                        <option value="1">1位 最隐蔽 (载体完全不变, 秘密模糊)</option>
+                        <option value="8">8位 完整 (伪装图=秘密图, 100%还原)</option>
                     </select>
                     <button class="btn btn-primary" id="goHide" style="margin-left:auto">⚡ 隐藏</button>
                 </div>
+                <div style="font-size:11px;color:var(--color-text-tertiary" id="hideTip">4位: 秘密图自动缩小嵌入, 提取时放大还原, 载体保持原貌</div>
                 <div id="hideResult" style="display:none">
                     <div style="text-align:center;font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">伪装图 (看起来就是普通图，但藏着秘密)</div>
                     <canvas id="outHide" style="max-width:100%;border-radius:8px;background:#ddd;margin:0 auto;display:block"></canvas>
@@ -54,10 +55,10 @@ export function init(container) {
                 <div style="display:flex;gap:8px;align-items:center">
                     <span style="font-size:13px;color:var(--color-text-secondary)">嵌入深度:</span>
                     <select id="depthX" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                        <option value="8" selected>8位 完整嵌入</option>
-                        <option value="4">4位</option>
+                        <option value="4" selected>4位 隐蔽</option>
                         <option value="2">2位</option>
                         <option value="1">1位</option>
+                        <option value="8">8位 完整</option>
                     </select>
                     <button class="btn btn-primary" id="goExtract" style="margin-left:auto">🔍 提取</button>
                 </div>
@@ -118,32 +119,37 @@ export function init(container) {
         extractUI.style.display = mode.value === 'extract' ? 'flex' : 'none';
     });
 
-    // LSB 隐写: 把 secret 缩放到载体尺寸, 嵌入低位
-    // 8位=全量嵌入: 载体先灰度化, 秘密图RGB原样写入(无损还原); 低位嵌入保留载体观感
+    // 隐写: 隐蔽模式(1-4位)=秘密缩放嵌入载体低位, 载体保持原貌; 8位=全量覆盖(100%还原)
     container.querySelector('#goHide').addEventListener('click', () => {
         if (!carrierImg || !secretImg) { alert('请先选择载体图和秘密图'); return; }
         const depth = +container.querySelector('#depth').value;
         const carrierCv = toCanvas(carrierImg, SIZE, SIZE);
-        const secretCv = toCanvas(secretImg, SIZE, SIZE);
         const cctx = carrierCv.getContext('2d');
-        const sctx = secretCv.getContext('2d');
         const cData = cctx.getImageData(0, 0, SIZE, SIZE);
-        const sData = sctx.getImageData(0, 0, SIZE, SIZE);
-        const cd = cData.data, sd = sData.data;
+        const cd = cData.data;
         const mask = (1 << depth) - 1;
 
         if (depth >= 8) {
-            // 无损模式: 载体灰度化, 秘密RGB全量覆盖
+            // 完整模式: 秘密RGB全量覆盖
+            const secretCv = toCanvas(secretImg, SIZE, SIZE);
+            const sd = secretCv.getContext('2d').getImageData(0, 0, SIZE, SIZE).data;
             for (let i = 0; i < cd.length; i += 4) {
-                const g = (cd[i] + cd[i+1] + cd[i+2]) / 3 | 0;
-                cd[i] = g; cd[i+1] = g; cd[i+2] = g; // 载体变灰
-                cd[i] = sd[i]; cd[i+1] = sd[i+1]; cd[i+2] = sd[i+2]; // 秘密覆盖
+                cd[i] = sd[i]; cd[i+1] = sd[i+1]; cd[i+2] = sd[i+2];
             }
         } else {
-            for (let i = 0; i < cd.length; i += 4) {
-                for (let ch = 0; ch < 3; ch++) {
-                    const secretHi = (sd[i + ch] >> (8 - depth)) & mask; // 秘密图高位
-                    cd[i + ch] = (cd[i + ch] & ~mask) | secretHi;       // 载入载体低位
+            // 隐蔽模式: 秘密缩放到容量允许尺寸 (面积 = 载体 × depth/8)
+            const sSize = Math.max(8, Math.floor(SIZE * Math.sqrt(depth / 8)));
+            const secretCv = toCanvas(secretImg, sSize, sSize);
+            const sd = secretCv.getContext('2d').getImageData(0, 0, sSize, sSize).data;
+            const scale = SIZE / sSize;
+            for (let sy = 0; sy < sSize; sy++) {
+                for (let sx = 0; sx < sSize; sx++) {
+                    const si = (sy * sSize + sx) * 4;
+                    const di = (Math.floor(sy * scale) * SIZE + Math.floor(sx * scale)) * 4;
+                    for (let ch = 0; ch < 3; ch++) {
+                        const secretHi = (sd[si + ch] >> (8 - depth)) & mask;
+                        cd[di + ch] = (cd[di + ch] & ~mask) | secretHi;
+                    }
                 }
             }
         }
@@ -172,27 +178,38 @@ export function init(container) {
         const d = imgData.data;
         const mask = (1 << depth) - 1;
 
+        const outExtract = container.querySelector('#outExtract');
+
         if (depth >= 8) {
-            // 无损提取: 直接读出秘密RGB
-            for (let i = 0; i < d.length; i += 4) {
-                d[i] = d[i] & 255; d[i+1] = d[i+1] & 255; d[i+2] = d[i+2] & 255;
-            }
+            // 完整提取: 直接读出秘密RGB
+            outExtract.width = SIZE; outExtract.height = SIZE;
+            outExtract.getContext('2d').drawImage(cv, 0, 0);
         } else {
-            for (let i = 0; i < d.length; i += 4) {
-                for (let ch = 0; ch < 3; ch++) {
-                    const low = d[i + ch] & mask; // 提取低位
-                    // 位复制放大到全范围: low重复填充8位 (1位: 0/255, 2位: 0/85/170/255, 4位: 0/17..255)
-                    let v = 0;
-                    for (let b = 0; b < 8; b += depth) v |= low << (8 - depth - b);
-                    d[i + ch] = v;
+            // 隐蔽提取: 从小格提取 → 放大回全尺寸
+            const sSize = Math.max(8, Math.floor(SIZE * Math.sqrt(depth / 8)));
+            const small = document.createElement('canvas');
+            small.width = sSize; small.height = sSize;
+            const sctx = small.getContext('2d');
+            const sData = sctx.createImageData(sSize, sSize);
+            const sd = sData.data;
+            const scale = SIZE / sSize;
+            for (let sy = 0; sy < sSize; sy++) {
+                for (let sx = 0; sx < sSize; sx++) {
+                    const si = (Math.floor(sy * scale) * SIZE + Math.floor(sx * scale)) * 4;
+                    const di = (sy * sSize + sx) * 4;
+                    for (let ch = 0; ch < 3; ch++) {
+                        const low = d[si + ch] & mask;
+                        let v = 0;
+                        for (let b = 0; b < 8; b += depth) v |= low << (8 - depth - b);
+                        sd[di + ch] = v;
+                    }
+                    sd[di + 3] = 255;
                 }
             }
+            sctx.putImageData(sData, 0, 0);
+            outExtract.width = SIZE; outExtract.height = SIZE;
+            outExtract.getContext('2d').drawImage(small, 0, 0, SIZE, SIZE);
         }
-        ctx.putImageData(imgData, 0, 0);
-
-        const outExtract = container.querySelector('#outExtract');
-        outExtract.width = SIZE; outExtract.height = SIZE;
-        outExtract.getContext('2d').drawImage(cv, 0, 0);
         container.querySelector('#extractResult').style.display = 'block';
     });
 
