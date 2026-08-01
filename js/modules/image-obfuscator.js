@@ -83,6 +83,11 @@ export function init(container) {
                 srcCv.width = N; srcCv.height = N;
                 const ctx = srcCv.getContext('2d');
                 ctx.drawImage(i, 0, 0, N, N);
+                // 检测图中带混淆参数 → 自动切解混淆模式
+                const probe = outCv.getContext('2d').getImageData(0, 0, N, N);
+                if (readParams(probe.data) && mode.value !== 'deobf') {
+                    mode.value = 'deobf';
+                }
                 exec();
             };
             i.src = reader.result;
@@ -214,6 +219,35 @@ export function init(container) {
     let lastObfParams = null; // 记录混淆时的算法+轮数, 解混淆自动复用
     try { lastObfParams = JSON.parse(localStorage.getItem('obf-last-params') || 'null'); } catch (e) { lastObfParams = null; }
 
+    // ===== 参数嵌入图片 (LSB隐写到角落像素, 图到哪参数到哪) =====
+    const PARAM_PX = 16; // 参数区: 第一行前16像素 (48bit ≥ 40bit)
+    const ALGO_CODES = { puzzle: 0, random: 1, hilbert: 2, zorder: 3, peano: 4 };
+    const ALGO_NAMES = ['puzzle', 'random', 'hilbert', 'zorder', 'peano'];
+
+    // 写入参数: 魔数"OBF"(3B) + 算法(1B) + 轮数(1B) = 40bit, LSB逐位写入
+    function embedParams(d, algo, rounds) {
+        const bytes = [0x4F, 0x42, 0x46, ALGO_CODES[algo] || 0, rounds & 0xFF];
+        for (let i = 0; i < 40; i++) {
+            const bit = (bytes[i >> 3] >> (7 - (i & 7))) & 1;
+            const px = (i / 3) | 0, ch = i % 3;
+            d[px * 4 + ch] = (d[px * 4 + ch] & ~1) | bit;
+        }
+    }
+
+    // 读取参数: 解析失败(非混淆图)返回null
+    function readParams(d) {
+        const bytes = new Uint8Array(5);
+        for (let i = 0; i < 40; i++) {
+            const px = (i / 3) | 0, ch = i % 3;
+            bytes[i >> 3] |= (d[px * 4 + ch] & 1) << (7 - (i & 7));
+        }
+        if (bytes[0] !== 0x4F || bytes[1] !== 0x42 || bytes[2] !== 0x46) return null;
+        const algo = ALGO_NAMES[bytes[3]];
+        const rounds = bytes[4];
+        if (!algo || rounds < 1 || rounds > 64) return null;
+        return { algo, rounds };
+    }
+
     // 曲线位移变换: 沿曲线序号平移像素 (真混淆, 保留局部相关性, 可逆)
     // 注意: 曲线"序号翻转"对Hilbert恰为180°旋转(中心对称), 必须用位移而非翻转!
     function makeShiftTransform(curve, shift) {
@@ -263,16 +297,6 @@ export function init(container) {
         let r = +rounds.value;
         let algoUsed = algo.value;
         const isObf = mode.value === 'obf';
-        if (isObf) {
-            lastObfParams = { algo: algo.value, rounds: r };
-            try { localStorage.setItem('obf-last-params', JSON.stringify(lastObfParams)); } catch (e) {}
-        } else if (lastObfParams) {
-            // 解混淆必须使用与混淆时相同的算法+轮数, 否则无法还原
-            algoUsed = lastObfParams.algo;
-            r = lastObfParams.rounds;
-        }
-        const usePuzzle = algoUsed === 'puzzle';
-        const useRandom = algoUsed === 'random';
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
@@ -281,31 +305,55 @@ export function init(container) {
         const imgData = ctx.getImageData(0, 0, N, N);
         const d = imgData.data;
 
+        if (isObf) {
+            lastObfParams = { algo: algo.value, rounds: r };
+            try { localStorage.setItem('obf-last-params', JSON.stringify(lastObfParams)); } catch (e) {}
+        } else {
+            // 优先读取图中嵌入的参数 (图到哪参数到哪)
+            const embedded = readParams(d);
+            if (embedded) {
+                algoUsed = embedded.algo;
+                r = embedded.rounds;
+                lastObfParams = embedded;
+                // 同步选择器显示
+                algo.value = embedded.algo;
+                rounds.value = embedded.rounds;
+            } else if (lastObfParams) {
+                // 兼容旧图(无嵌入参数): 用记忆参数
+                algoUsed = lastObfParams.algo;
+                r = lastObfParams.rounds;
+            }
+        }
+        const usePuzzle = algoUsed === 'puzzle';
+        const useRandom = algoUsed === 'random';
+
         // 每轮: 生成置换 perm (随机雪花 或 曲线位移) - 始终用正向变换构建
         // 解混淆 = 逆序应用同一组置换 (曲线位移保局部相关性, 真混淆)
         const curves = ['hilbert', 'zorder', 'peano'];
         const perms = [];
         for (let round = 0; round < r; round++) {
+            let perm;
             if (usePuzzle) {
                 // 拼图块打乱: 每轮不同种子
-                perms.push(buildPuzzlePerm(20231 + round * 104729));
+                perm = buildPuzzlePerm(20231 + round * 104729);
             } else if (useRandom) {
                 // 雪花随机: 每轮不同种子
-                perms.push(buildRandomPerm(10007 + round * 7919));
+                perm = buildRandomPerm(10007 + round * 7919);
             } else {
                 const curve2 = getCurve(curves[round % 3]);
                 // 大位移量: 每轮按曲线长度的 1/4 递增 (图像切分重组, 视觉明显, 仍保局部性)
                 const shift = ((round + 1) * curve2.size / 4) | 0;
                 const T2 = makeShiftTransform(curve2, shift);
-                const perm = new Int32Array(N * N);
+                perm = new Int32Array(N * N);
                 for (let y = 0; y < N; y++) {
                     for (let x = 0; x < N; x++) {
                         const [nx, ny] = T2(x, y);
                         perm[y * N + x] = ny * N + nx;
                     }
                 }
-                perms.push(perm);
             }
+            for (let p = 0; p < PARAM_PX; p++) perm[p] = p; // 角落像素不参与置换(保留参数区)
+            perms.push(perm);
         }
 
         if (isObf) {
@@ -330,6 +378,8 @@ export function init(container) {
                 d.set(nd);
             }
         }
+        // 混淆结果嵌入参数(LSB角落), 解混淆时自动读取
+        if (isObf) embedParams(d, algoUsed, r);
         ctx.putImageData(imgData, 0, 0);
         labelL.textContent = mode.value === 'obf' ? '原图' : '混淆图';
         labelR.textContent = mode.value === 'obf' ? '混淆结果' : '还原结果';
