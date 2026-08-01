@@ -15,7 +15,8 @@ export function init(container) {
                 </select>
                 <span style="font-size:13px;color:var(--color-text-secondary)">算法:</span>
                 <select id="algo" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                    <option value="random" selected>🌪️ 雪花随机 (完全打乱)</option>
+                    <option value="puzzle" selected>🧩 拼图块打乱 (保留细节, 明显混淆)</option>
+                    <option value="random">🌪️ 雪花随机 (完全打乱)</option>
                     <option value="hilbert">🧬 Hilbert艺术扭曲</option>
                     <option value="zorder">🔀 Z-order艺术扭曲</option>
                     <option value="peano">🌀 Peano艺术扭曲</option>
@@ -209,18 +210,62 @@ export function init(container) {
 
     let lastObfParams = null; // 记录混淆时的算法+轮数, 解混淆自动复用
 
+    // 曲线位移变换: 沿曲线序号平移像素 (真混淆, 保留局部相关性, 可逆)
+    // 注意: 曲线"序号翻转"对Hilbert恰为180°旋转(中心对称), 必须用位移而非翻转!
+    function makeShiftTransform(curve, shift) {
+        const total = curve.size;
+        return function(x, y) {
+            const d = curve.xy2d(x, y);
+            if (d === null) return [x, y];
+            let nd = d + shift;
+            if (nd < 0) nd += total;
+            nd %= total;
+            return curve.d2xy(nd) || [x, y];
+        };
+    }
+
+    // 拼图块打乱: 8×8 块级种子置换 (块内细节完整, 块间打乱, 保留色调分布, 可逆)
+    function buildPuzzlePerm(seed) {
+        const B = 32;            // 块大小
+        const nb = N / B;        // 每维块数 = 8
+        const total = nb * nb;   // 64 块
+        const blockOrder = new Int32Array(total);
+        for (let i = 0; i < total; i++) blockOrder[i] = i;
+        const rng = mulberry32(seed);
+        for (let i = total - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            const t = blockOrder[i]; blockOrder[i] = blockOrder[j]; blockOrder[j] = t;
+        }
+        const perm = new Int32Array(N * N);
+        for (let ky = 0; ky < nb; ky++) {
+            for (let kx = 0; kx < nb; kx++) {
+                const k = ky * nb + kx;
+                const tk = blockOrder[k];
+                const tx = tk % nb, ty = (tk / nb) | 0;
+                for (let by = 0; by < B; by++) {
+                    for (let bx = 0; bx < B; bx++) {
+                        const sx = kx * B + bx, sy = ky * B + by;
+                        const dx = tx * B + bx, dy = ty * B + by;
+                        perm[sy * N + sx] = dy * N + dx;
+                    }
+                }
+            }
+        }
+        return perm;
+    }
+
     function exec() {
         if (!img) return;
         let r = +rounds.value;
-        let useRandom = algo.value === 'random';
         const isObf = mode.value === 'obf';
         if (isObf) {
             lastObfParams = { algo: algo.value, rounds: r };
         } else if (lastObfParams) {
             // 解混淆必须使用与混淆时相同的参数, 否则无法还原
-            useRandom = lastObfParams.algo === 'random';
             r = lastObfParams.rounds;
         }
+        const usePuzzle = algo.value === 'puzzle';
+        const useRandom = algo.value === 'random';
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
@@ -229,25 +274,26 @@ export function init(container) {
         const imgData = ctx.getImageData(0, 0, N, N);
         const d = imgData.data;
 
-        // 每轮: 生成置换 perm (随机雪花 或 曲线翻转+递增90°旋转)
-        // 多曲线交替(hilbert→zorder→peano)打破单曲线对称巧合, 轮数再多也不塌缩
+        // 每轮: 生成置换 perm (随机雪花 或 曲线位移) - 始终用正向变换构建
+        // 解混淆 = 逆序应用同一组置换 (曲线位移保局部相关性, 真混淆)
         const curves = ['hilbert', 'zorder', 'peano'];
         const perms = [];
         for (let round = 0; round < r; round++) {
-            if (useRandom) {
+            if (usePuzzle) {
+                // 拼图块打乱: 每轮不同种子
+                perms.push(buildPuzzlePerm(20231 + round * 104729));
+            } else if (useRandom) {
                 // 雪花随机: 每轮不同种子
                 perms.push(buildRandomPerm(10007 + round * 7919));
             } else {
                 const curve2 = getCurve(curves[round % 3]);
-                const T2 = makeTransform(curve2);
-                const ang = ((round + 1) * 90) % 360;
+                // 大位移量: 每轮按曲线长度的 1/4 递增 (图像切分重组, 视觉明显, 仍保局部性)
+                const shift = ((round + 1) * curve2.size / 4) | 0;
+                const T2 = makeShiftTransform(curve2, shift);
                 const perm = new Int32Array(N * N);
                 for (let y = 0; y < N; y++) {
                     for (let x = 0; x < N; x++) {
-                        let [nx, ny] = T2(x, y);
-                        if (ang === 90) { const t = nx; nx = ny; ny = N - 1 - t; }
-                        else if (ang === 180) { nx = N - 1 - nx; ny = N - 1 - ny; }
-                        else if (ang === 270) { const t = nx; nx = N - 1 - ny; ny = t; }
+                        const [nx, ny] = T2(x, y);
                         perm[y * N + x] = ny * N + nx;
                     }
                 }
