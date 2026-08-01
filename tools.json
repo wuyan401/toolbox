@@ -338,16 +338,16 @@
             "id": "prism-tank",
             "name": "光棱坦克工厂",
             "icon": "🔮",
-            "description": "棱镜光束图片特效，红警光棱坦克风格色散分解",
+            "description": "图片隐写：把完整图像藏在看似普通的图里，可提取还原",
             "category": "生成美化",
             "module": "js/modules/prism-tank.js",
             "enabled": true
         },
         {
             "id": "image-obfuscator",
-            "name": "图片混淆器",
-            "icon": "🎭",
-            "description": "马赛克/像素/噪点/模糊/打乱/条纹混淆打码",
+            "name": "小番茄图片混淆",
+            "icon": "🍅",
+            "description": "空间填充曲线可逆混淆/解混淆，多算法多轮，本地保护隐私",
             "category": "生成美化",
             "module": "js/modules/image-obfuscator.js",
             "enabled": true

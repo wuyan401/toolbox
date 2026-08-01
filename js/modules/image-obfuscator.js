@@ -1,53 +1,64 @@
 export const id = 'image-obfuscator';
-export const name = '图片混淆器';
-export const icon = '🎭';
-export const description = '马赛克/像素块/噪点混淆打码，保护图片隐私';
+export const name = '小番茄图片混淆';
+export const icon = '🍅';
+export const description = '空间填充曲线可逆混淆/解混淆，多算法多轮操作，本地保护隐私';
 export const category = '生成美化';
 export const enabled = true;
 
 export function init(container) {
     container.innerHTML = `
-        <div style="max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
-            <div style="padding:16px;border:2px dashed var(--color-border);border-radius:12px;text-align:center;cursor:pointer;transition:all .2s" id="drop">
-                <div style="font-size:36px">🖼️</div>
-                <div style="color:var(--color-text-secondary);font-size:13px;margin-top:6px">点击选择图片 / 拖拽到此处</div>
+        <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;gap:8px;align-items:center">
+                <select id="mode" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
+                    <option value="obf">🎭 混淆 (原图→乱图)</option>
+                    <option value="deobf">🔄 解混淆 (乱图→原图)</option>
+                </select>
+                <span style="font-size:13px;color:var(--color-text-secondary)">算法:</span>
+                <select id="algo" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
+                    <option value="hilbert">🧬 Hilbert曲线</option>
+                    <option value="zorder">🔀 Z-order曲线</option>
+                    <option value="peano">🌀 Peano曲线</option>
+                </select>
+                <span style="font-size:13px;color:var(--color-text-secondary)">轮数:</span>
+                <select id="rounds" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
+                    <option value="1">1轮</option>
+                    <option value="2" selected>2轮</option>
+                    <option value="4">4轮</option>
+                    <option value="8">8轮</option>
+                </select>
+            </div>
+            <div style="padding:16px;border:2px dashed var(--color-border);border-radius:12px;text-align:center;cursor:pointer" id="drop">
+                <div style="font-size:36px">🍅</div>
+                <div style="color:var(--color-text-secondary);font-size:13px;margin-top:6px">${'点击选择图片 / 拖拽到此处'} (自动缩放为 512×512)</div>
                 <input type="file" id="file" accept="image/*" style="display:none">
             </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" id="controls" style="display:none">
-                <span style="font-size:13px;color:var(--color-text-secondary)">混淆方式:</span>
-                <select id="mode" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
-                    <option value="mosaic">🔲 马赛克</option>
-                    <option value="pixel">🟦 像素化</option>
-                    <option value="noise">🌫️ 噪点覆盖</option>
-                    <option value="blur">💨 高斯模糊</option>
-                    <option value="shuffle">🔀 色块打乱</option>
-                    <option value="strip">📶 干扰条纹</option>
-                </select>
-                <span style="font-size:13px;color:var(--color-text-secondary)">强度:</span>
-                <input type="range" id="power" min="1" max="100" value="40" style="flex:1">
-                <button class="btn btn-primary" id="go">⚡ 混淆</button>
-                <button class="btn" id="dl">💾 下载</button>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-primary" id="go" style="flex:1">⚡ 执行</button>
+                <button class="btn" id="dl">💾 下载结果</button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <div style="text-align:center">
-                    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">原图</div>
-                    <canvas id="src" style="max-width:100%;border-radius:8px;background:#000"></canvas>
+                    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px" id="labelL">原图</div>
+                    <canvas id="src" width="256" height="256" style="max-width:100%;border-radius:8px;background:#000;image-rendering:pixelated"></canvas>
                 </div>
                 <div style="text-align:center">
-                    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">混淆输出</div>
-                    <canvas id="out" style="max-width:100%;border-radius:8px;background:#000"></canvas>
+                    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px" id="labelR">结果</div>
+                    <canvas id="out" width="256" height="256" style="max-width:100%;border-radius:8px;background:#000;image-rendering:pixelated"></canvas>
                 </div>
             </div>
         </div>`;
 
+    const mode = container.querySelector('#mode');
+    const algo = container.querySelector('#algo');
+    const rounds = container.querySelector('#rounds');
     const drop = container.querySelector('#drop');
     const fileInput = container.querySelector('#file');
-    const controls = container.querySelector('#controls');
-    const mode = container.querySelector('#mode');
-    const power = container.querySelector('#power');
     const srcCv = container.querySelector('#src');
     const outCv = container.querySelector('#out');
+    const labelL = container.querySelector('#labelL');
+    const labelR = container.querySelector('#labelR');
     let img = null;
+    const N = 256; // 2^8
 
     drop.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => load(e.target.files[0]));
@@ -62,154 +73,149 @@ export function init(container) {
             const i = new Image();
             i.onload = () => {
                 img = i;
-                const w = 320, h = Math.round(i.height * w / i.width);
-                srcCv.width = w; srcCv.height = h;
-                srcCv.getContext('2d').drawImage(i, 0, 0, w, h);
-                controls.style.display = 'flex';
-                render();
+                srcCv.width = N; srcCv.height = N;
+                const ctx = srcCv.getContext('2d');
+                const scale = Math.max(N / i.width, N / i.height);
+                ctx.drawImage(i, (N - i.width * scale) / 2, (N - i.height * scale) / 2, i.width * scale, i.height * scale);
+                exec();
             };
             i.src = reader.result;
         };
         reader.readAsDataURL(f);
     }
 
-    function render() {
-        if (!img) return;
-        const w = 320, h = Math.round(img.height * w / img.width);
-        outCv.width = w; outCv.height = h;
-        const ctx = outCv.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        const p = +power.value;
-        const m = mode.value;
+    // ===== 空间填充曲线 =====
 
-        if (m === 'mosaic') {
-            // 马赛克: 方块取平均色
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const size = Math.max(4, Math.round(p / 100 * 40));
-            for (let y = 0; y < h; y += size) {
-                for (let x = 0; x < w; x += size) {
-                    let r = 0, g = 0, b = 0, n = 0;
-                    for (let yy = y; yy < Math.min(y + size, h); yy++)
-                        for (let xx = x; xx < Math.min(x + size, w); xx++) {
-                            const i = (yy * w + xx) * 4;
-                            r += d[i]; g += d[i+1]; b += d[i+2]; n++;
-                        }
-                    r = r/n|0; g = g/n|0; b = b/n|0;
-                    for (let yy = y; yy < Math.min(y + size, h); yy++)
-                        for (let xx = x; xx < Math.min(x + size, w); xx++) {
-                            const i = (yy * w + xx) * 4;
-                            d[i] = r; d[i+1] = g; d[i+2] = b;
-                        }
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        } else if (m === 'pixel') {
-            // 像素化: 采样最近邻放大
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const size = Math.max(2, Math.round(p / 100 * 30));
-            const nd = new Uint8ClampedArray(d);
-            for (let y = 0; y < h; y += size) {
-                for (let x = 0; x < w; x += size) {
-                    const i = (y * w + x) * 4;
-                    const r = nd[i], g = nd[i+1], b = nd[i+2];
-                    for (let yy = y; yy < Math.min(y + size, h); yy++)
-                        for (let xx = x; xx < Math.min(x + size, w); xx++) {
-                            const j = (yy * w + xx) * 4;
-                            d[j] = r; d[j+1] = g; d[j+2] = b;
-                        }
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        } else if (m === 'noise') {
-            // 噪点: 随机像素覆盖
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const density = p / 100;
-            for (let i = 0; i < d.length; i += 4) {
-                if (Math.random() < density) {
-                    d[i] = Math.random() * 255;
-                    d[i+1] = Math.random() * 255;
-                    d[i+2] = Math.random() * 255;
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        } else if (m === 'blur') {
-            // 简单盒式模糊
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const r = Math.max(1, Math.round(p / 100 * 12));
-            const nd = new Uint8ClampedArray(d);
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    let rr = 0, gg = 0, bb = 0, n = 0;
-                    for (let dy = -r; dy <= r; dy++)
-                        for (let dx = -r; dx <= r; dx++) {
-                            const xx = x + dx, yy = y + dy;
-                            if (xx < 0 || xx >= w || yy < 0 || yy >= h) continue;
-                            const i = (yy * w + xx) * 4;
-                            rr += nd[i]; gg += nd[i+1]; bb += nd[i+2]; n++;
-                        }
-                    const i = (y * w + x) * 4;
-                    d[i] = rr/n; d[i+1] = gg/n; d[i+2] = bb/n;
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        } else if (m === 'shuffle') {
-            // 色块打乱: 块级随机重排
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const size = Math.max(8, Math.round(p / 100 * 40));
-            const blocks = [];
-            for (let y = 0; y < h; y += size)
-                for (let x = 0; x < w; x += size)
-                    blocks.push({x, y, w: Math.min(size, w-x), h: Math.min(size, h-y)});
-            // Fisher-Yates 打乱
-            for (let i = blocks.length - 1; i > 0; i--) {
-                const j = Math.random() * (i + 1) | 0;
-                [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
-            }
-            const nd = new Uint8ClampedArray(d);
-            let bi = 0;
-            for (let y = 0; y < h; y += size)
-                for (let x = 0; x < w; x += size) {
-                    const b = blocks[bi++];
-                    for (let yy = 0; yy < Math.min(size, h-y); yy++)
-                        for (let xx = 0; xx < Math.min(size, w-x); xx++) {
-                            const srcI = ((b.y + yy) * w + b.x + xx) * 4;
-                            const dstI = ((y + yy) * w + x + xx) * 4;
-                            d[dstI] = nd[srcI]; d[dstI+1] = nd[srcI+1]; d[dstI+2] = nd[srcI+2];
-                        }
-                }
-            ctx.putImageData(imgData, 0, 0);
-        } else {
-            // 干扰条纹: 水平半透明条纹
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const thickness = Math.max(2, Math.round(p / 100 * 24));
-            const gap = Math.max(4, Math.round(p / 100 * 48));
-            for (let y = 0; y < h; y++) {
-                const inStrip = (y % (thickness + gap)) < thickness;
-                for (let x = 0; x < w; x++) {
-                    const i = (y * w + x) * 4;
-                    if (inStrip) {
-                        const v = ((y / (thickness + gap)) | 0) % 2 ? 255 : 0;
-                        d[i] = v; d[i+1] = v; d[i+2] = v;
-                    }
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
+    // Hilbert 曲线: d (曲线序号) <-> (x, y)
+    function hilbertRot(n, x, y, rx, ry) {
+        if (ry === 0) {
+            if (rx === 1) { x = n - 1 - x; y = n - 1 - y; }
+            return [y, x];
         }
+        return [x, y];
+    }
+    function hilbertD2XY(n, d) {
+        let x = 0, y = 0;
+        for (let s = 1; s < n; s *= 2) {
+            const rx = 1 & (d / 2 | 0);
+            const ry = 1 & (d ^ rx);
+            [x, y] = hilbertRot(s, x, y, rx, ry);
+            x += s * rx; y += s * ry;
+            d = d / 4 | 0;
+        }
+        return [x, y];
+    }
+    function hilbertXY2D(n, x, y) {
+        let d = 0;
+        for (let s = n / 2 | 0; s > 0; s = s / 2 | 0) {
+            const rx = (x & s) > 0 ? 1 : 0;
+            const ry = (y & s) > 0 ? 1 : 0;
+            d += s * s * ((3 * rx) ^ ry);
+            [x, y] = hilbertRot(s, x, y, rx, ry);
+        }
+        return d;
     }
 
-    mode.addEventListener('change', render);
-    power.addEventListener('input', render);
-    container.querySelector('#go').addEventListener('click', render);
+    // Z-order (Morton): 位交错
+    function zXY2D(x, y) {
+        let d = 0;
+        for (let i = 0; i < 8; i++) {
+            d |= ((x >> i) & 1) << (2 * i);
+            d |= ((y >> i) & 1) << (2 * i + 1);
+        }
+        return d;
+    }
+    function zD2XY(d) {
+        let x = 0, y = 0;
+        for (let i = 0; i < 8; i++) {
+            x |= ((d >> (2 * i)) & 1) << i;
+            y |= ((d >> (2 * i + 1)) & 1) << i;
+        }
+        return [x, y];
+    }
+
+    // Peano: 3进制交错, 覆盖 243×243 区域(3^5), 超出部分像素不动
+    function peanoD2XY(d) {
+        if (d >= 243 * 243) return null;
+        let x = 0, y = 0, pow = 1;
+        for (let i = 0; i < 5; i++) {
+            const t = d % 9;
+            d = d / 9 | 0;
+            const gx = t % 3, gy = t / 3 | 0;
+            x += gx * pow; y += gy * pow;
+            pow *= 3;
+        }
+        return [x, y];
+    }
+    function peanoXY2D(x, y) {
+        if (x >= 243 || y >= 243) return null;
+        let d = 0, pow = 1;
+        for (let i = 0; i < 5; i++) {
+            const gx = x % 3, gy = y % 3;
+            x = x / 3 | 0; y = y / 3 | 0;
+            d += (gy * 3 + gx) * pow;
+            pow *= 9;
+        }
+        return d;
+    }
+
+    function getCurve(name) {
+        if (name === 'hilbert') return { xy2d: (x,y) => hilbertXY2D(N, x, y), d2xy: d => hilbertD2XY(N, d), size: N*N };
+        if (name === 'zorder') return { xy2d: zXY2D, d2xy: zD2XY, size: N*N };
+        return { xy2d: peanoXY2D, d2xy: peanoD2XY, size: 243*243 };
+    }
+
+    // 自逆变换 T: (x,y) -> 曲线序号翻转后的位置
+    // T(T(p)) = p, 所以混淆N轮 + 解混淆N轮必然还原
+    function makeTransform(curve) {
+        const total = curve.size;
+        return function(x, y) {
+            const d = curve.xy2d(x, y);
+            if (d === null) return [x, y]; // 曲线未覆盖区域不动
+            const inv = total - 1 - d;
+            const pos = curve.d2xy(inv);
+            return pos || [x, y];
+        };
+    }
+
+    function exec() {
+        if (!img) return;
+        const curve = getCurve(algo.value);
+        const r = +rounds.value;
+        const T = makeTransform(curve);
+
+        outCv.width = N; outCv.height = N;
+        const ctx = outCv.getContext('2d');
+        ctx.drawImage(img, 0, 0, N, N);
+        const imgData = ctx.getImageData(0, 0, N, N);
+        const d = imgData.data;
+
+        // 应用自逆变换 r 轮 (混淆/解混淆都同样调用, 轮数相同即可还原)
+        for (let round = 0; round < r; round++) {
+            const nd = new Uint8ClampedArray(d);
+            for (let y = 0; y < N; y++) {
+                for (let x = 0; x < N; x++) {
+                    const [nx, ny] = T(x, y);
+                    const srcI = (y * N + x) * 4;
+                    const dstI = (ny * N + nx) * 4;
+                    nd[dstI] = d[srcI]; nd[dstI+1] = d[srcI+1]; nd[dstI+2] = d[srcI+2]; nd[dstI+3] = 255;
+                }
+            }
+            d.set(nd);
+        }
+        ctx.putImageData(imgData, 0, 0);
+        labelL.textContent = mode.value === 'obf' ? '原图' : '混淆图';
+        labelR.textContent = mode.value === 'obf' ? '混淆结果' : '还原结果';
+    }
+
+    mode.addEventListener('change', exec);
+    algo.addEventListener('change', exec);
+    rounds.addEventListener('change', exec);
+    container.querySelector('#go').addEventListener('click', exec);
     container.querySelector('#dl').addEventListener('click', () => {
         const a = document.createElement('a');
         a.href = outCv.toDataURL('image/png');
-        a.download = 'obfuscated.png';
+        a.download = mode.value === 'obf' ? 'obfuscated.png' : 'restored.png';
         a.click();
     });
 
