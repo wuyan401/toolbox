@@ -68,7 +68,8 @@ export function init(container) {
           <button id="el-clear" style="padding:5px 12px;border-radius:8px;border:1px solid #ff5252;background:rgba(255,82,82,.12);color:#ff8a80;cursor:pointer;font-size:12px;font-family:inherit">🗑️ 清空</button>
         </div>
         <div style="position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(120,200,255,.35);box-shadow:0 0 26px rgba(120,200,255,.1)">
-          <canvas id="el-cv" width="240" height="180" style="display:block;width:100%;image-rendering:pixelated;background:#0a0d1f;cursor:crosshair"></canvas>
+          <canvas id="el-cv" width="240" height="180" style="display:block;width:100%;image-rendering:pixelated;background:#0a0d1f;cursor:crosshair;transition:transform .12s"></canvas>
+          <div id="el-zoom" style="position:absolute;top:8px;right:10px;font-size:11px;color:#9ad1ff;background:rgba(0,15,45,.7);padding:2px 8px;border-radius:6px;border:1px solid rgba(120,200,255,.3)">100%</div>
         </div>
         <div style="display:flex;gap:10px;font-size:11px;color:#5c7fa3;padding:4px 4px;flex-wrap:wrap">
           <span>颗粒: <b id="el-count" style="color:#9ad1ff">0</b></span>
@@ -134,7 +135,8 @@ export function init(container) {
                     life[i] = 0;
                 } else {
                     grid[i] = curElem;
-                    life[i] = 0;
+                    // 火焰/蒸汽画上即给寿命 (否则下一帧就消失)
+                    life[i] = (curElem === E.FIRE || curElem === E.STEAM) ? 50 + (Math.random() * 40 | 0) : 0;
                 }
             }
         }
@@ -149,6 +151,16 @@ export function init(container) {
     });
     window.addEventListener('mouseup', () => { drawing = false; erasing = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
+    // 滚轮缩放画布 (像素级查看)
+    let zoom = 1;
+    const zoomLabel = container.querySelector('#el-zoom');
+    cv.addEventListener('wheel', e => {
+        e.preventDefault();
+        zoom = Math.max(.5, Math.min(3, zoom * (e.deltaY < 0 ? 1.12 : .89)));
+        cv.style.transform = `scale(${zoom})`;
+        cv.style.transformOrigin = 'center center';
+        zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    }, { passive: false });
 
     // ===== 物理更新 (每步2格, 性能与效果平衡) =====
     function step() {
@@ -207,6 +219,21 @@ export function init(container) {
                 if (id === E.STEAM) {
                     life[i]--;
                     if (life[i] <= 0) { grid[i] = E.WATER; continue; } // 冷凝
+                    // 遇冰/水加速冷凝
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const nx = x + dx, ny2 = y + dy;
+                            if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                            const nid = grid[ny2 * W + nx];
+                            if (nid === E.ICE || nid === E.WATER) {
+                                grid[i] = E.WATER;
+                                life[i] = 0;
+                                break;
+                            }
+                        }
+                        if (grid[i] === E.WATER) break;
+                    }
+                    if (grid[i] === E.WATER) continue;
                     const upY = y - down;
                     if (upY >= 0 && upY < H && grid[upY * W + x] === E.EMPTY) {
                         const tx = x + (Math.random() < .4 ? (Math.random() < .5 ? -1 : 1) : 0);
@@ -214,6 +241,37 @@ export function init(container) {
                             grid[upY * W + tx] = E.STEAM;
                             life[upY * W + tx] = life[i];
                             grid[i] = E.EMPTY;
+                        }
+                    }
+                    continue;
+                }
+
+                // 植物: 生命周期 (蔓延生长, 缺水枯萎)
+                if (id === E.PLANT) {
+                    life[i]--;
+                    if (life[i] <= 0) { grid[i] = E.EMPTY; continue; }
+                    // 遇水恢复生长能量
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const nx = x + dx, ny2 = y + dy;
+                            if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                            if (grid[ny2 * W + nx] === E.WATER) { life[i] = 600; break; }
+                        }
+                        if (life[i] === 600) break;
+                    }
+                    // 缓慢蔓延 (藤蔓式)
+                    if (life[i] > 200 && Math.random() < .01) {
+                        const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                        const d0 = dirs[Math.random() * 4 | 0];
+                        for (const dd of [d0, dirs[Math.random() * 4 | 0]]) {
+                            const nx = x + dd[0], ny2 = y + dd[1];
+                            if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                            if (grid[ny2 * W + nx] === E.EMPTY) {
+                                grid[ny2 * W + nx] = E.PLANT;
+                                life[ny2 * W + nx] = 300;
+                                life[i] -= 60;
+                                break;
+                            }
                         }
                     }
                     continue;
@@ -237,6 +295,37 @@ export function init(container) {
 
                 if (isLiquid(id)) {
                     // 液体: 下落 + 侧向流动
+                    // 水: 灭火 (相邻火焰 → 蒸汽)
+                    if (id === E.WATER) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const nx = x + dx, ny2 = y + dy;
+                                if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                                const ni = ny2 * W + nx;
+                                if (grid[ni] === E.FIRE) {
+                                    grid[ni] = E.STEAM;
+                                    life[ni] = 50;
+                                }
+                            }
+                        }
+                    }
+                    // 岩浆: 点燃可燃物
+                    if (id === E.LAVA) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const nx = x + dx, ny2 = y + dy;
+                                if (nx < 0 || ny2 < 0 || nx >= W || ny2 >= H) continue;
+                                const ni = ny2 * W + nx;
+                                const nid = grid[ni];
+                                if (nid === E.GUNPOWDER) {
+                                    explode(nx, ny2);
+                                } else if (nid === E.WOOD || nid === E.PLANT || nid === E.OIL) {
+                                    grid[ni] = E.FIRE;
+                                    life[ni] = 60 + (Math.random() * 40 | 0);
+                                }
+                            }
+                        }
+                    }
                     if (inB) {
                         const below = grid[ny * W + x];
                         if (below === E.EMPTY) {
@@ -335,11 +424,13 @@ export function init(container) {
                                 if (grid[ny2 * W + nx] === E.WATER) {
                                     if (Math.random() < .08) {
                                         grid[i] = E.PLANT;
+                                        life[i] = 600; // 植物生长能量
                                         // 向上生长一截
                                         let gy = y - down;
                                         let guard = 0;
                                         while (gy >= 0 && gy < H && guard < 6 && grid[gy * W + x] === E.EMPTY) {
                                             grid[gy * W + x] = E.PLANT;
+                                            life[gy * W + x] = 400;
                                             gy -= down;
                                             guard++;
                                         }
