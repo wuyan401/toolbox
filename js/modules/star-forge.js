@@ -673,30 +673,46 @@ export function init(container) {
         if (!B) return;
         // 手动模式下玩家不自动开火 (按绑定键手动发射)
         if (ship.isPlayer && weaponMode === 'manual') return;
+        // 按类型分组: 同类型武器齐射 (共享CD, 一次齐射全部)
+        const groups = {};
         for (const m of ship.mods) {
-            const M = MODULES[m.key];
-            if (!M.dmg || m.hp <= 0) continue;
-            ship.cds[m.key] = (ship.cds[m.key] || 0) - dt;
-            if (ship.cds[m.key] > 0) continue;
+            const MM = MODULES[m.key];
+            if (MM && MM.dmg && m.hp > 0) (groups[m.key] = groups[m.key] || []).push(m);
+        }
+        for (const key in groups) {
+            const M = MODULES[key];
+            const mods = groups[key];
+            ship.cds[key] = (ship.cds[key] || 0) - dt;
+            if (ship.cds[key] > 0) continue;
             if (ship.energy < M.energy * .2) continue;
             const tgt = target && !target.dead ? target : null;
             if (!tgt) continue;
-            const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
-            const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
-            const dist = Math.hypot(tgt.x - gx, tgt.y - gy);
-            if (dist > M.range) continue;
-            const ang = Math.atan2(tgt.y - gy, tgt.x - gx);
-            if (m.key === 'laser') {
-                B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, life: .12, dead: false });
-                muzz(gx, gy, '#ff5252');
-            } else if (m.key === 'cannon') {
-                B.bullets.push({ type: 'cannon', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, dead: false });
-                muzz(gx, gy, '#ff9100');
-            } else if (m.key === 'missile') {
-                B.bullets.push({ type: 'missile', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: m.key, track: true, trail: true, dead: false });
-                muzz(gx, gy, '#b388ff');
+            // 至少一个模块在射程内才开火
+            let inRange = false;
+            for (const m of mods) {
+                const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
+                const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
+                if (Math.hypot(tgt.x - gx, tgt.y - gy) <= M.range) { inRange = true; break; }
             }
-            ship.cds[m.key] = 1 / M.rate;
+            if (!inRange) continue;
+            const ang = Math.atan2(tgt.y - ship.y, tgt.x - ship.x);
+            // 齐射所有同类型模块
+            for (const m of mods) {
+                const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
+                const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
+                if (Math.hypot(tgt.x - gx, tgt.y - gy) > M.range) continue;
+                if (key === 'laser') {
+                    B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: key, life: .12, dead: false });
+                    muzz(gx, gy, '#ff5252');
+                } else if (key === 'cannon') {
+                    B.bullets.push({ type: 'cannon', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: key, dead: false });
+                    muzz(gx, gy, '#ff9100');
+                } else if (key === 'missile') {
+                    B.bullets.push({ type: 'missile', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: ship.isPlayer ? 'player' : 'enemy', source: key, track: true, trail: true, dead: false });
+                    muzz(gx, gy, '#b388ff');
+                }
+            }
+            ship.cds[key] = 1 / M.rate;
             ship.energy -= M.energy * .5;
         }
     }
@@ -712,22 +728,21 @@ export function init(container) {
         return best;
     }
 
-    // 手动发射: 按绑定键发射对应类型全部武器 (朝舰首/鼠标方向)
+    // 手动发射: 按绑定键齐射对应类型全部武器 (朝舰首/鼠标方向)
     function manualFire(ship, key) {
         const B = battle;
         if (!B || ship.dead) return;
         const M = MODULES[key];
         if (!M || !M.dmg) return;
-        let fired = false;
-        for (const m of ship.mods) {
-            if (m.key !== key || m.hp <= 0) continue;
-            ship.cds[m.key] = (ship.cds[m.key] || 0) - 0;
-            if (ship.cds[m.key] > 0) continue;
-            if (ship.energy < M.energy * .2) continue;
+        ship.cds[key] = (ship.cds[key] || 0) - 0;
+        if (ship.cds[key] > 0) return;
+        if (ship.energy < M.energy * .2) { flash(`⚠️ 能量不足`); return; }
+        const mods = ship.mods.filter(m => m.key === key && m.hp > 0);
+        if (!mods.length) { flash(`⚠️ 无${M.name}可用`); return; }
+        const ang = ship.ang; // 手动模式发射方向 = 舰首 (鼠标瞄准方向)
+        for (const m of mods) {
             const gx = ship.x + m.wx * Math.cos(ship.ang) - m.wy * Math.sin(ship.ang);
             const gy = ship.y + m.wx * Math.sin(ship.ang) + m.wy * Math.cos(ship.ang);
-            // 手动模式发射方向 = 舰首 (鼠标瞄准方向)
-            const ang = ship.ang;
             if (key === 'laser') {
                 B.bullets.push({ type: 'laser', x: gx, y: gy, ang, speed: 0, range: M.range, dmg: M.dmg, owner: 'player', source: key, life: .12, dead: false });
                 muzz(gx, gy, '#ff5252');
@@ -738,12 +753,9 @@ export function init(container) {
                 B.bullets.push({ type: 'missile', x: gx, y: gy, ang, speed: M.speed, range: M.range, dmg: M.dmg, owner: 'player', source: key, track: true, trail: true, dead: false });
                 muzz(gx, gy, '#b388ff');
             }
-            ship.cds[m.key] = 1 / M.rate;
-            ship.energy -= M.energy * .5;
-            fired = true;
         }
-        // 无武器/无能量时提示
-        if (!fired) flash(`⚠️ 无${M.name}可用或能量不足`);
+        ship.cds[key] = 1 / M.rate;
+        ship.energy -= M.energy * .5;
     }
 
     function modAtWorld(ship, wx, wy) {
