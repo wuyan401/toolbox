@@ -463,8 +463,21 @@ export function init(container) {
         for (let i = 0; i < 4; i++) {
             battle.nebulas.push({ x: Math.random() * 1600 - 320, y: Math.random() * 1200 - 280, r: 120 + Math.random() * 200, hue: Math.random() * 360 });
         }
-        for (let i = 0; i < 110; i++) {
-            battle.stars.push({ x: Math.random() * BATTLE_W * 2, y: Math.random() * BATTLE_H * 2, s: Math.random() * 1.8 + .4, tw: Math.random() * 6.28, c: Math.random() < .15 ? '#aee6ff' : '#cfe0ff' });
+        for (let i = 0; i < 140; i++) {
+            const layer = Math.random() < .5 ? 1 : 2;
+            battle.stars.push({ x: Math.random() * 3600, y: Math.random() * 2800, s: (layer === 2 ? Math.random() * 2 + .8 : Math.random() * 1.1 + .5), tw: Math.random() * 6.28, c: Math.random() < .15 ? '#aee6ff' : '#dbe8ff', layer });
+        }
+        // 小行星/残骸 (移动参照物)
+        battle.rocks = [];
+        for (let i = 0; i < 10; i++) {
+            const rr = 9 + Math.random() * 20;
+            battle.rocks.push({
+                x: Math.random() * 3400 - 400, y: Math.random() * 2600 - 300,
+                r: rr, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .8,
+                seg: 6 + Math.floor(Math.random() * 4),
+                c: `hsl(${15 + Math.random() * 25}, ${18 + Math.random() * 15}%, ${22 + Math.random() * 18}%)`,
+                edge: Math.random() < .3,
+            });
         }
         const n = 1 + Math.floor(Math.random() * 2);
         for (let i = 0; i < n; i++) {
@@ -495,6 +508,10 @@ export function init(container) {
         // 输入: WASD 平移 + 鼠标瞄准
         const ix = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
         const iy = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+        // 手动模式: 武器CD持续递减 (自动模式在fireWeapons里递减, 手动模式需要单独递减)
+        if (weaponMode === 'manual') {
+            for (const k in p.cds) p.cds[k] -= dt;
+        }
         if (p.thrust > 0) {
             const acc = p.thrust * 65 / p.mass;
             // 船体坐标系: 前 = ang方向, 右 = ang+90°
@@ -644,6 +661,16 @@ export function init(container) {
             if (hit) B.bullets.splice(i, 1);
         }
 
+        // 移动: 高速时产生速度线粒子 (移动反馈)
+        const spd = Math.hypot(p.vx, p.vy);
+        if (spd > 40 && Math.random() < Math.min(.5, spd / 220)) {
+            const ba = Math.atan2(-p.vx, -p.vy);
+            B.particles.push({
+                x: p.x + (Math.random() - .5) * 40, y: p.y + (Math.random() - .5) * 40,
+                vx: Math.cos(ba) * 60, vy: Math.sin(ba) * 60,
+                life: .35, maxLife: .35, color: '#aee6ff', size: 1.2,
+            });
+        }
         // 粒子
         for (let i = B.particles.length - 1; i >= 0; i--) {
             const pt = B.particles[i];
@@ -900,16 +927,42 @@ export function init(container) {
             wctx.fillStyle = g;
             wctx.fillRect(nb.x + ox - nb.r, nb.y + oy - nb.r, nb.r * 2, nb.r * 2);
         }
-        // 星星
+        // 星星 (双层视差: 远层慢, 近层快 → 移动感)
         for (const s of B.stars) {
+            const pf = s.layer === 1 ? .15 : .45;
+            const sx = ((s.x + ox * pf) % 3600 + 3600) % 3600 - 200;
+            const sy = ((s.y + oy * pf) % 2800 + 2800) % 2800 - 200;
             const a = .35 + .45 * Math.sin(B.time * 2 + s.tw);
             wctx.fillStyle = s.c;
             wctx.globalAlpha = Math.max(.1, a);
-            wctx.fillRect(s.x + ox, s.y + oy, s.s, s.s);
+            wctx.fillRect(sx, sy, s.s, s.s);
             wctx.globalAlpha = 1;
         }
+        // 小行星 (移动参照物)
+        for (const rk of B.rocks) {
+            rk.rot += rk.vr * 0.016;
+            const sx = rk.x + ox * .8, sy = rk.y + oy * .8;
+            if (sx < -80 || sx > BATTLE_W + 80 || sy < -80 || sy > BATTLE_H + 80) continue;
+            wctx.save();
+            wctx.translate(sx, sy);
+            wctx.rotate(rk.rot);
+            wctx.fillStyle = rk.c;
+            wctx.strokeStyle = 'rgba(255,255,255,.12)';
+            wctx.lineWidth = 1;
+            wctx.beginPath();
+            for (let k = 0; k < rk.seg; k++) {
+                const a = k / rk.seg * Math.PI * 2;
+                const wob = rk.r * (0.78 + 0.22 * Math.sin(k * 2.7 + rk.rot));
+                const px = Math.cos(a) * wob, py = Math.sin(a) * wob;
+                if (k === 0) wctx.moveTo(px, py); else wctx.lineTo(px, py);
+            }
+            wctx.closePath();
+            wctx.fill();
+            wctx.stroke();
+            wctx.restore();
+        }
         // 网格背景 (深空参考)
-        wctx.strokeStyle = 'rgba(64,196,255,.05)';
+        wctx.strokeStyle = 'rgba(64,196,255,.13)';
         wctx.lineWidth = 1;
         const gs = 64;
         for (let gx = Math.floor(camX / gs) * gs; gx < camX + BATTLE_W / 2 + gs; gx += gs) {
@@ -1004,7 +1057,7 @@ export function init(container) {
             <span>❤️ <b style="color:#69f0ae">${p.mods.filter(m => m.hp > 0).length}</b>/${p.mods.length}</span>
             <span>🛡️ <b style="color:#40c4ff">${Math.round(p.shield)}</b>/${p.shieldMax}</span>
             <span>⚡ <b style="color:#ffeb3b">${p.energy.toFixed(0)}</b></span>
-            <span>🚀 <b style="color:#80d8ff">${p.thrust}</b></span>
+            <span>💨 <b style="color:#80d8ff">${Math.round(Math.hypot(p.vx, p.vy))}</b></span>
             <span>⚔️ ${einfo || '无目标'}</span>
             <span style="color:${weaponMode === 'auto' ? '#69f0ae' : '#ffd54a'}">${weaponMode === 'auto' ? '🔄 自动' : `🎮 [${(bindings.laser || '?').toUpperCase()}]激光 [${(bindings.cannon || '?').toUpperCase()}]加农 [${(bindings.missile || '?').toUpperCase()}]导弹`}</span>`;
     }
