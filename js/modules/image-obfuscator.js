@@ -16,9 +16,9 @@ export function init(container) {
                 <span style="font-size:13px;color:var(--color-text-secondary)">算法:</span>
                 <select id="algo" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
                     <option value="random" selected>🌪️ 雪花随机 (完全打乱)</option>
-                    <option value="hilbert">🧬 Hilbert曲线</option>
-                    <option value="zorder">🔀 Z-order曲线</option>
-                    <option value="peano">🌀 Peano曲线</option>
+                    <option value="hilbert">🧬 Hilbert艺术扭曲</option>
+                    <option value="zorder">🔀 Z-order艺术扭曲</option>
+                    <option value="peano">🌀 Peano艺术扭曲</option>
                 </select>
                 <span style="font-size:13px;color:var(--color-text-secondary)">轮数:</span>
                 <select id="rounds" style="padding:6px 10px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);color:var(--color-text)">
@@ -207,11 +207,20 @@ export function init(container) {
         return perm;
     }
 
+    let lastObfParams = null; // 记录混淆时的算法+轮数, 解混淆自动复用
+
     function exec() {
         if (!img) return;
-        const r = +rounds.value;
+        let r = +rounds.value;
+        let useRandom = algo.value === 'random';
         const isObf = mode.value === 'obf';
-        const useRandom = algo.value === 'random';
+        if (isObf) {
+            lastObfParams = { algo: algo.value, rounds: r };
+        } else if (lastObfParams) {
+            // 解混淆必须使用与混淆时相同的参数, 否则无法还原
+            useRandom = lastObfParams.algo === 'random';
+            r = lastObfParams.rounds;
+        }
 
         if (outCv.width !== N) { outCv.width = N; outCv.height = N; }
         const ctx = outCv.getContext('2d');
@@ -273,9 +282,16 @@ export function init(container) {
         labelR.textContent = mode.value === 'obf' ? '混淆结果' : '还原结果';
     }
 
-    mode.addEventListener('change', exec);
     algo.addEventListener('change', exec);
     rounds.addEventListener('change', exec);
+    // 切模式: 解混淆自动复用混淆时的算法+轮数, 再执行 (保证可还原)
+    mode.addEventListener('change', () => {
+        if (mode.value === 'deobf' && lastObfParams) {
+            algo.value = lastObfParams.algo;
+            rounds.value = lastObfParams.rounds;
+        }
+        exec();
+    });
     container.querySelector('#go').addEventListener('click', exec);
     container.querySelector('#dl').addEventListener('click', () => {
         const a = document.createElement('a');
